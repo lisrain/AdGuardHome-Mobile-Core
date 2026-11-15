@@ -21,8 +21,6 @@ markdownlint \
 	./HACKING.md \
 	./README.md \
 	./SECURITY.md \
-	./internal/next/changelog.md \
-	./internal/dhcpd/*.md \
 	./openapi/*.md \
 	./scripts/*.md \
 	;

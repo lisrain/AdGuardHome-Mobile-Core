@@ -60,11 +60,23 @@ case "$channel" in
 	;;
 esac
 
-# Check VERSION against the default value from the Makefile.  If it is that, use
-# the version calculation script.
+# The mobile fork tracks the v1.0.0 line, so it reports the latest v1.* tag
+# (including beta tags) plus the build date, e.g. "v1.0.0-b.2-mobile.20261115".
+# An explicit VERSION is still respected.
 version="${VERSION:-}"
 if [ "$version" = 'v0.0.0' ] || [ "$version" = '' ]; then
-	version="$(sh ./scripts/make/version.sh)"
+	upstream_version="$(git describe --tags --abbrev=0 --match 'v1.*' 2>/dev/null || true)"
+	if [ -z "$upstream_version" ]; then
+		upstream_version="$(
+			git tag -l 'v*' --sort=-v:refname 2>/dev/null \
+				| grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+				| head -n 1
+		)"
+	fi
+	if [ -z "$upstream_version" ]; then
+		upstream_version='v0.0.0'
+	fi
+	version="${upstream_version}-mobile.$(date +%Y%m%d)"
 fi
 readonly version
 

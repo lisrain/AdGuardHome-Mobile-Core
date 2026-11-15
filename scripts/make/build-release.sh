@@ -105,31 +105,8 @@ fi
 
 #    os  arch      arm mips
 platforms="\
-darwin   amd64     -   -
-darwin   arm64     -   -
-freebsd  386       -   -
-freebsd  amd64     -   -
-freebsd  arm       5   -
-freebsd  arm       6   -
-freebsd  arm       7   -
-freebsd  arm64     -   -
-linux    386       -   -
 linux    amd64     -   -
-linux    arm       5   -
-linux    arm       6   -
-linux    arm       7   -
-linux    arm64     -   -
-linux    mips      -   softfloat
-linux    mips64    -   softfloat
-linux    mips64le  -   softfloat
-linux    mipsle    -   softfloat
-linux    ppc64le   -   -
-linux    riscv64   -   -
-openbsd  amd64     -   -
-openbsd  arm64     -   -
-windows  386       -   -
-windows  amd64     -   -
-windows  arm64     -   -"
+linux    arm64     -   -"
 readonly platforms
 
 # Function sign signs the specified build as intended by the target operating
@@ -142,19 +119,16 @@ sign() {
 
 	# Get the arguments.  Here and below, use the "sign_" prefix for all
 	# variables local to function sign.
-	sign_os="$1"
 	sign_bin_path="$2"
 
 	log "signing $sign_bin_path"
 
-	if [ "$sign_os" != 'windows' ]; then
-		gpg \
-			--default-key "$gpg_key" \
-			--detach-sig \
-			--passphrase "$gpg_key_passphrase" \
-			--pinentry-mode loopback -q "$sign_bin_path" \
-			;
-	fi
+	gpg \
+		--default-key "$gpg_key" \
+		--detach-sig \
+		--passphrase "$gpg_key_passphrase" \
+		--pinentry-mode loopback -q "$sign_bin_path" \
+		;
 }
 
 # Function build builds the release for one platform.  It builds a binary and
@@ -169,12 +143,7 @@ build() {
 		build_mips="$5" \
 		;
 
-	# Use the ".exe" filename extension if we build a Windows release.
-	if [ "$build_os" = 'windows' ]; then
-		build_output="./${build_dir}/AdGuardHome.exe"
-	else
-		build_output="./${build_dir}/AdGuardHome"
-	fi
+	build_output="./${build_dir}/AdGuardHome"
 
 	mkdir -p "./${build_dir}"
 
@@ -211,8 +180,8 @@ printf '%s\n' "$platforms" | while read -r os arch arm mips; do
 	#
 	# For example, when $arches is " amd64 arm64 " and $arch is "amd64",
 	# then the pattern to remove is "* amd64 *", so the whole string becomes
-	# empty.  On the other hand, if $arch is "windows", then the pattern is
-	# "* windows *", which doesn't match, so nothing is removed.
+	# empty.  On the other hand, if $arch is "386", then the pattern is
+	# "* 386 *", which doesn't match, so nothing is removed.
 	#
 	# See https://stackoverflow.com/a/43912605/1892060.
 	#

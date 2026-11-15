@@ -89,31 +89,8 @@ done
 
 #    os  arch      arm mips
 platforms="\
-darwin   amd64     -   -
-darwin   arm64     -   -
-freebsd  386       -   -
-freebsd  amd64     -   -
-freebsd  arm       5   -
-freebsd  arm       6   -
-freebsd  arm       7   -
-freebsd  arm64     -   -
-linux    386       -   -
 linux    amd64     -   -
-linux    arm       5   -
-linux    arm       6   -
-linux    arm       7   -
-linux    arm64     -   -
-linux    mips      -   softfloat
-linux    mips64    -   softfloat
-linux    mips64le  -   softfloat
-linux    mipsle    -   softfloat
-linux    ppc64le   -   -
-linux    riscv64   -   -
-openbsd  amd64     -   -
-openbsd  arm64     -   -
-windows  386       -   -
-windows  amd64     -   -
-windows  arm64     -   -"
+linux    arm64     -   -"
 readonly platforms
 
 # Function pack packs the build of a single platform into an archive.
@@ -121,48 +98,14 @@ pack() {
 	# Get the arguments.  Here and below, use the "pack_" prefix for all
 	# variables local to function pack.
 	pack_ar="$2" \
-		pack_os="$3" \
 		;
 
-	# Make archives.  Windows and macOS prefer ZIP archives; the rest,
-	# gzipped tarballs.
-	case "$pack_os" in
-	'darwin')
-		# Make the binary executable as this script may be run independently.
-		chmod +x "./${dist}/${1}/AdGuardHome/AdGuardHome"
+	# Make gzipped tarballs.  Make the binary executable as this script may be
+	# run independently.
+	chmod +x "./${dist}/${1}/AdGuardHome/AdGuardHome"
 
-		pack_archive="./${dist}/${pack_ar}.zip"
-
-		# Remove the previous archive, if any, because zip updates the existing
-		# archives instead of recreating them.
-		rm -f "$pack_archive"
-
-		# TODO(a.garipov): Find an option similar to the -C option of tar for
-		# zip.
-		(cd "${dist}/${1}" && zip -9 -q -r "../../${pack_archive}" "./AdGuardHome")
-		;;
-	'windows')
-		# Make the binary executable as this script may be run independently.
-		chmod +x "./${dist}/${1}/AdGuardHome/AdGuardHome.exe"
-
-		pack_archive="./${dist}/${pack_ar}.zip"
-
-		# Remove the previous archive, if any, because zip updates the existing
-		# archives instead of recreating them.
-		rm -f "$pack_archive"
-
-		# TODO(a.garipov): Find an option similar to the -C option of tar for
-		# zip.
-		(cd "${dist}/${1}" && zip -9 -q -r "../../${pack_archive}" "./AdGuardHome")
-		;;
-	*)
-		# Make the binary executable as this script may be run independently.
-		chmod +x "./${dist}/${1}/AdGuardHome/AdGuardHome"
-
-		pack_archive="./${dist}/${pack_ar}.tar.gz"
-		tar -C "./${dist}/${1}" -c -f - "./AdGuardHome" | gzip -9 - >"$pack_archive"
-		;;
-	esac
+	pack_archive="./${dist}/${pack_ar}.tar.gz"
+	tar -C "./${dist}/${1}" -c -f - "./AdGuardHome" | gzip -9 - >"$pack_archive"
 
 	log "$pack_archive"
 }
@@ -178,8 +121,8 @@ echo "$platforms" | while read -r os arch arm mips; do
 	#
 	# For example, when $arches is " amd64 arm64 " and $arch is "amd64",
 	# then the pattern to remove is "* amd64 *", so the whole string becomes
-	# empty.  On the other hand, if $arch is "windows", then the pattern is
-	# "* windows *", which doesn't match, so nothing is removed.
+	# empty.  On the other hand, if $arch is "386", then the pattern is
+	# "* 386 *", which doesn't match, so nothing is removed.
 	#
 	# See https://stackoverflow.com/a/43912605/1892060.
 	#

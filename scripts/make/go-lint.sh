@@ -35,7 +35,7 @@ set -f -u
 #   *  Packages log and github.com/AdguardTeam/golibs/log are replaced by
 #      stdlib's new package log/slog and AdGuard's new utilities package
 #      github.com/AdguardTeam/golibs/logutil/slogutil.  The exceptions are
-#      packages home, dhcpd, and aghos, where package log is used before the
+#      packages home and aghos, where package log is used before the
 #      main logger is configured.
 #
 #   *  Package github.com/prometheus/client_golang/prometheus/promauto is not
@@ -65,9 +65,6 @@ set -f -u
 # NOTE:  Flag -H for grep is non-POSIX but all of Busybox, GNU, macOS, and
 # OpenBSD support it.
 #
-# NOTE:  Exclude the security_windows.go, because it requires unsafe for the OS
-# APIs.
-#
 # TODO(a.garipov): Add golibs/log.
 blocklist_imports() {
 	import_or_tab="$(printf '^\\(import \\|\t\\)')"
@@ -78,7 +75,6 @@ blocklist_imports() {
 		-name '*.go' \
 		'!' '(' \
 		-name '*.pb.go' \
-		-o -path './internal/permcheck/security_windows.go' \
 		')' \
 		-exec \
 		'grep' \
@@ -143,17 +139,12 @@ underscores() {
 			-type 'f' \
 			-name '*_*.go' \
 			'!' '(' \
-			-name '*_bsd.go' \
-			-o -name '*_darwin.go' \
-			-o -name '*_freebsd.go' \
-			-o -name '*_generate.go' \
+			-name '*_generate.go' \
 			-o -name '*_linux.go' \
 			-o -name '*_next.go' \
-			-o -name '*_openbsd.go' \
 			-o -name '*_others.go' \
 			-o -name '*_test.go' \
 			-o -name '*_unix.go' \
-			-o -name '*_windows.go' \
 			')' \
 			-exec 'printf' '\t%s\n' '{}' ';'
 	)"
@@ -202,11 +193,6 @@ fi
 # section into account.
 run_linter "$go" tool gocyclo --over 10 ./internal/ ./scripts/
 
-# TODO(a.garipov): Enable 10 for all.
-run_linter "$go" tool gocognit --exact-recursion --over 14 \
-	./internal/dhcpd \
-	;
-
 run_linter "$go" tool gocognit --over='10' \
 	./internal/aghalg/ \
 	./internal/agh/ \
@@ -225,8 +211,6 @@ run_linter "$go" tool gocognit --over='10' \
 	./internal/filtering/ \
 	./internal/home/ \
 	./internal/ipset \
-	./internal/next/ \
-	./internal/ossvc/ \
 	./internal/permcheck/ \
 	./internal/querylog/ \
 	./internal/rdns/ \
@@ -276,8 +260,6 @@ run_linter "$go" tool fieldalignment \
 	./internal/filtering/rulelist/ \
 	./internal/filtering/safesearch/ \
 	./internal/ipset/ \
-	./internal/next/... \
-	./internal/ossvc/ \
 	./internal/querylog/ \
 	./internal/rdns/ \
 	./internal/schedule/ \
@@ -302,7 +284,6 @@ run_linter "$go" tool gosec --exclude=G115 --fmt=golint --quiet \
 	./internal/arpdb/ \
 	./internal/client/ \
 	./internal/configmigrate/ \
-	./internal/dhcpd/ \
 	./internal/dhcpsvc/ \
 	./internal/dnsforward/ \
 	./internal/filtering/hashprefix/ \
@@ -310,8 +291,6 @@ run_linter "$go" tool gosec --exclude=G115 --fmt=golint --quiet \
 	./internal/filtering/rulelist/ \
 	./internal/filtering/safesearch/ \
 	./internal/ipset/ \
-	./internal/next/ \
-	./internal/ossvc/ \
 	./internal/rdns/ \
 	./internal/schedule/ \
 	./internal/stats/ \
@@ -322,9 +301,5 @@ run_linter "$go" tool gosec --exclude=G115 --fmt=golint --quiet \
 run_linter "$go" tool errcheck work
 
 run_linter "$go" tool staticcheck --matrix work <<-'EOF'
-	darwin:  GOOS=darwin
-	freebsd: GOOS=freebsd
-	linux:   GOOS=linux
-	openbsd: GOOS=openbsd
-	windows: GOOS=windows
+	linux: GOOS=linux
 EOF
