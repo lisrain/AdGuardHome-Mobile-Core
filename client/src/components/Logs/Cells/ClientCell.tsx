@@ -1,23 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { nanoid } from 'nanoid';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { Link, useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { checkFiltered, getBlockingClientName } from '../../../helpers/helpers';
+import { checkFiltered } from '../../../helpers/helpers';
 import { BLOCK_ACTIONS } from '../../../helpers/constants';
 
-import { toggleBlocking, toggleBlockingForClient } from '../../../actions';
+import { toggleBlocking } from '../../../actions';
 
 import IconTooltip from './IconTooltip';
 
 import { renderFormattedClientCell } from '../../../helpers/renderFormattedClientCell';
-import { toggleClientBlock } from '../../../actions/access';
-import { getBlockClientInfo } from './helpers';
-import { getStats } from '../../../actions/stats';
-import { updateLogs } from '../../../actions/queryLogs';
 import { RootState } from '../../../initialState';
 
 interface ClientCellProps {
@@ -30,8 +26,6 @@ interface ClientCellProps {
             city?: string;
             orgname?: string;
         };
-        disallowed: boolean;
-        disallowed_rule: string;
     };
     domain: string;
     reason: string;
@@ -40,18 +34,13 @@ interface ClientCellProps {
 const ClientCell = ({ client, client_id, client_info, domain, reason }: ClientCellProps) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
-    const history = useHistory();
 
     const autoClients = useSelector((state: RootState) => state.dashboard.autoClients, shallowEqual);
 
     const isDetailed = useSelector((state: RootState) => state.queryLogs.isDetailed);
 
-    const allowedClients = useSelector((state: RootState) => state.access.allowed_clients, shallowEqual);
-    const [isOptionsOpened, setOptionsOpened] = useState(false);
-
     const autoClient = autoClients.find((autoClient: any) => autoClient.name === client);
 
-    const clients = useSelector((state: RootState) => state.dashboard.clients);
     const source = autoClient?.source;
     const whoisAvailable = client_info && Object.keys(client_info.whois).length > 0;
     const clientName = client_info?.name || client_id;
@@ -76,8 +65,6 @@ const ClientCell = ({ client, client_id, client_info, domain, reason }: ClientCe
 
     const isFiltered = checkFiltered(reason);
 
-    const clientIds = clients.map((c: any) => c.ids).flat();
-
     const nameClass = classNames('w-90 o-hidden d-flex flex-column', {
         'mt-2': isDetailed && !client_info?.name && !whoisAvailable,
         'white-space--nowrap': isDetailed,
@@ -90,88 +77,9 @@ const ClientCell = ({ client, client_id, client_info, domain, reason }: ClientCe
     const renderBlockingButton = (isFiltered: any, domain: any) => {
         const buttonType = isFiltered ? BLOCK_ACTIONS.UNBLOCK : BLOCK_ACTIONS.BLOCK;
 
-        const {
-            confirmMessage,
-            buttonKey: blockingClientKey,
-            lastRuleInAllowlist,
-        } = getBlockClientInfo(
-            client,
-            client_info?.disallowed || false,
-            client_info?.disallowed_rule || '',
-            allowedClients,
-        );
-
-        const blockingForClientKey = isFiltered ? 'unblock_for_this_client_only' : 'block_for_this_client_only';
-        const clientNameBlockingFor = getBlockingClientName(clients, client);
-
-        const onClick = async () => {
-            await dispatch(toggleBlocking(buttonType, domain));
-            await dispatch(getStats());
-            setOptionsOpened(false);
+        const onClick = () => {
+            dispatch(toggleBlocking(buttonType, domain));
         };
-
-        const BUTTON_OPTIONS = [
-            {
-                name: buttonType,
-                onClick,
-                className: isFiltered ? 'bg--green' : 'bg--danger',
-            },
-            {
-                name: blockingForClientKey,
-                onClick: () => {
-                    dispatch(toggleBlockingForClient(buttonType, domain, clientNameBlockingFor));
-                    setOptionsOpened(false);
-                },
-            },
-            {
-                name: blockingClientKey,
-                onClick: async () => {
-                    if (window.confirm(confirmMessage)) {
-                        await dispatch(
-                            toggleClientBlock(
-                                client,
-                                client_info?.disallowed || false,
-                                client_info?.disallowed_rule || '',
-                            ),
-                        );
-                        await dispatch(updateLogs());
-                        setOptionsOpened(false);
-                    }
-                },
-                disabled: lastRuleInAllowlist,
-            },
-        ];
-
-        if (!clientIds.includes(client)) {
-            BUTTON_OPTIONS.push({
-                name: 'add_persistent_client',
-                onClick: () => {
-                    history.push(`/#clients?clientId=${client}`);
-                },
-            });
-        }
-
-        const getOptions = (options: any) => {
-            if (options.length === 0) {
-                return null;
-            }
-
-            return (
-                <>
-                    {options.map(({ name, onClick, disabled, className }: any) => (
-                        <button
-                            key={name}
-                            className={classNames('button-action--arrow-option px-4 py-1', className)}
-                            onClick={onClick}
-                            disabled={disabled}>
-                            {t(name)}
-                        </button>
-                    ))}
-                </>
-            );
-        };
-
-        const content = getOptions(BUTTON_OPTIONS);
 
         const containerClass = classNames('button-action__container', {
             'button-action__container--detailed': isDetailed,
@@ -179,25 +87,15 @@ const ClientCell = ({ client, client_id, client_info, domain, reason }: ClientCe
 
         return (
             <div className={containerClass}>
-                <button type="button" className="btn btn-icon btn-sm px-0" onClick={() => setOptionsOpened(true)}>
-                    <svg className="icon24 icon--lightgray button-action__icon">
-                        <use xlinkHref="#bullets" />
-                    </svg>
+                <button
+                    type="button"
+                    className={classNames('button-action--arrow-option px-4 py-1', {
+                        'bg--danger': !isFiltered,
+                        'bg--green': isFiltered,
+                    })}
+                    onClick={onClick}>
+                    {t(buttonType)}
                 </button>
-                {isOptionsOpened && (
-                    <IconTooltip
-                        className="icon24"
-                        tooltipClass="button-action--arrow-option-container"
-                        xlinkHref="bullets"
-                        triggerClass="btn btn-icon btn-sm px-0 button-action__hidden-trigger"
-                        content={content}
-                        placement="bottom-end"
-                        trigger="click"
-                        onVisibilityChange={setOptionsOpened}
-                        defaultTooltipShown={true}
-                        delayHide={0}
-                    />
-                )}
             </div>
         );
     };

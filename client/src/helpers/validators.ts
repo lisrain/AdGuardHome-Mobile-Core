@@ -397,26 +397,6 @@ export const validateInstallPort = (value: any) => {
  * @param value {number}
  * @returns {undefined|string}
  */
-export const validatePortTLS = (value: any) => {
-    if (value === 0) {
-        return undefined;
-    }
-    if (value && (value < STANDARD_WEB_PORT || value > MAX_PORT)) {
-        return i18next.t('form_error_port_range');
-    }
-    return undefined;
-};
-
-/**
- * @param value {number}
- * @returns {undefined|string}
- */
-export const validatePortQuic = validatePortTLS;
-
-/**
- * @param value {number}
- * @returns {undefined|string}
- */
 export const validateIsSafePort = (value: any) => {
     if (UNSAFE_PORTS.includes(value)) {
         return i18next.t('form_error_port_unsafe');
@@ -531,17 +511,3 @@ export const validateIPv6Subnet = (value: any) => {
     return undefined;
 };
 
-/**
- * @returns {undefined|string}
- * @param value
- * @param allValues
- */
-export const validatePlainDns = (value: any, allValues: any) => {
-    const { enabled } = allValues;
-
-    if (!enabled && !value) {
-        return i18next.t('encryption_plain_dns_error');
-    }
-
-    return undefined;
-};

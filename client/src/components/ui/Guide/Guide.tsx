@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import i18next from 'i18next';
-import { useSelector } from 'react-redux';
 
 import { MOBILE_CONFIG_LINKS } from '../../../helpers/constants';
 
 import Tabs from '../Tabs';
 
 import { MobileConfigForm } from './MobileConfigForm';
-import { RootState } from '../../../initialState';
 
 interface renderLiProps {
     label?: string;
@@ -349,9 +347,9 @@ interface GuideProps {
 export const Guide = ({ dnsAddresses }: GuideProps) => {
     const { t } = useTranslation();
 
-    const serverName = useSelector((state: RootState) => state.encryption?.server_name);
+    const serverName = '';
+    const portHttps = undefined;
 
-    const portHttps = useSelector((state: RootState) => state.encryption?.port_https);
     const tlsAddress = dnsAddresses?.filter((item: any) => item.includes('tls://')) ?? '';
     const httpsAddress = dnsAddresses?.filter((item: any) => item.includes('https://')) ?? '';
     const showDnsPrivacyNotice = httpsAddress.length < 1 && tlsAddress.length < 1;

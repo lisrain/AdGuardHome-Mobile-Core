@@ -1,1 +1,0 @@
-export { SettingLink } from './SettingLink';

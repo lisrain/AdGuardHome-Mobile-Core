@@ -2,19 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 
-import i18next from 'i18next';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import {
     checkFiltered,
     checkRewrite,
     checkRewriteHosts,
     checkWhiteList,
-    checkSafeSearch,
-    checkSafeBrowsing,
-    checkParental,
     getRulesToFilterList,
 } from '../../../helpers/helpers';
-import { BLOCK_ACTIONS, FILTERED, FILTERED_STATUS } from '../../../helpers/constants';
+import { BLOCK_ACTIONS, FILTERED_STATUS } from '../../../helpers/constants';
 
 import { toggleBlocking } from '../../../actions';
 import { RootState } from '../../../initialState';
@@ -55,11 +51,6 @@ const getTitle = () => {
 
     const reason = useSelector((state: RootState) => state.filtering.check.reason);
 
-    const getReasonFiltered = (reason: any) => {
-        const filterKey = reason.replace(FILTERED, '');
-        return i18next.t('query_log_filtered', { filter: filterKey });
-    };
-
     const ruleAndFilterNames = getRulesToFilterList(rules, filters, whitelistFilters);
 
     const REASON_TO_TITLE_MAP = {
@@ -68,9 +59,6 @@ const getTitle = () => {
         [FILTERED_STATUS.REWRITE_HOSTS]: t('rewrite_hosts_applied'),
         [FILTERED_STATUS.FILTERED_BLACK_LIST]: ruleAndFilterNames,
         [FILTERED_STATUS.NOT_FILTERED_WHITE_LIST]: ruleAndFilterNames,
-        [FILTERED_STATUS.FILTERED_SAFE_SEARCH]: getReasonFiltered(reason),
-        [FILTERED_STATUS.FILTERED_SAFE_BROWSING]: getReasonFiltered(reason),
-        [FILTERED_STATUS.FILTERED_PARENTAL]: getReasonFiltered(reason),
     };
 
     if (Object.prototype.hasOwnProperty.call(REASON_TO_TITLE_MAP, reason)) {
@@ -90,7 +78,7 @@ const getTitle = () => {
 };
 
 const Info = () => {
-    const { hostname, reason, service_name, cname, ip_addrs } = useSelector(
+    const { hostname, reason, cname, ip_addrs } = useSelector(
         (state: RootState) => state.filtering.check,
         shallowEqual,
     );
@@ -104,8 +92,6 @@ const Info = () => {
         'logs__row--green': checkWhiteList(reason),
     });
 
-    const onlyFiltered = checkSafeSearch(reason) || checkSafeBrowsing(reason) || checkParental(reason);
-
     const isFiltered = checkFiltered(reason);
 
     return (
@@ -115,16 +101,10 @@ const Info = () => {
             </div>
 
             <div>{title}</div>
-            {!onlyFiltered && (
-                <>
-                    {service_name && <div>{t('check_service', { service: service_name })}</div>}
+            {cname && <div>{t('check_cname', { cname })}</div>}
 
-                    {cname && <div>{t('check_cname', { cname })}</div>}
-
-                    {ip_addrs && <div>{t('check_ip', { ip: ip_addrs.join(', ') })}</div>}
-                    {renderBlockingButton(isFiltered, hostname)}
-                </>
-            )}
+            {ip_addrs && <div>{t('check_ip', { ip: ip_addrs.join(', ') })}</div>}
+            {renderBlockingButton(isFiltered, hostname)}
         </div>
     );
 };

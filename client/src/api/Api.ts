@@ -154,95 +154,6 @@ class Api {
         return this.makeRequest(url, method);
     }
 
-    // Parental
-    PARENTAL_STATUS = { path: 'parental/status', method: 'GET' };
-
-    PARENTAL_ENABLE = { path: 'parental/enable', method: 'POST' };
-
-    PARENTAL_DISABLE = { path: 'parental/disable', method: 'POST' };
-
-    getParentalStatus() {
-        const { path, method } = this.PARENTAL_STATUS;
-
-        return this.makeRequest(path, method);
-    }
-
-    enableParentalControl() {
-        const { path, method } = this.PARENTAL_ENABLE;
-
-        return this.makeRequest(path, method);
-    }
-
-    disableParentalControl() {
-        const { path, method } = this.PARENTAL_DISABLE;
-
-        return this.makeRequest(path, method);
-    }
-
-    // Safebrowsing
-    SAFEBROWSING_STATUS = { path: 'safebrowsing/status', method: 'GET' };
-
-    SAFEBROWSING_ENABLE = { path: 'safebrowsing/enable', method: 'POST' };
-
-    SAFEBROWSING_DISABLE = { path: 'safebrowsing/disable', method: 'POST' };
-
-    getSafebrowsingStatus() {
-        const { path, method } = this.SAFEBROWSING_STATUS;
-
-        return this.makeRequest(path, method);
-    }
-
-    enableSafebrowsing() {
-        const { path, method } = this.SAFEBROWSING_ENABLE;
-
-        return this.makeRequest(path, method);
-    }
-
-    disableSafebrowsing() {
-        const { path, method } = this.SAFEBROWSING_DISABLE;
-
-        return this.makeRequest(path, method);
-    }
-
-    // Safesearch
-    SAFESEARCH_STATUS = { path: 'safesearch/status', method: 'GET' };
-
-    SAFESEARCH_UPDATE = { path: 'safesearch/settings', method: 'PUT' };
-
-    getSafesearchStatus() {
-        const { path, method } = this.SAFESEARCH_STATUS;
-
-        return this.makeRequest(path, method);
-    }
-
-    /**
-     * interface SafeSearchConfig {
-        "enabled": boolean,
-        "bing": boolean,
-        "duckduckgo": boolean,
-        "google": boolean,
-        "pixabay": boolean,
-        "yandex": boolean,
-        "youtube": boolean
-     * }
-     * @param {*} data - SafeSearchConfig
-     * @returns 200 ok
-     */
-    updateSafesearch(data: any) {
-        const { path, method } = this.SAFESEARCH_UPDATE;
-        return this.makeRequest(path, method, { data });
-    }
-
-    // enableSafesearch() {
-    //     const { path, method } = this.SAFESEARCH_ENABLE;
-    //     return this.makeRequest(path, method);
-    // }
-
-    // disableSafesearch() {
-    //     const { path, method } = this.SAFESEARCH_DISABLE;
-    //     return this.makeRequest(path, method);
-    // }
-
     // Language
 
     async changeLanguage(config: any) {
@@ -259,89 +170,6 @@ class Api {
         profile.theme = config.theme;
 
         return this.setProfile(profile);
-    }
-
-    // DHCP
-    DHCP_STATUS = { path: 'dhcp/status', method: 'GET' };
-
-    DHCP_SET_CONFIG = { path: 'dhcp/set_config', method: 'POST' };
-
-    DHCP_FIND_ACTIVE = { path: 'dhcp/find_active_dhcp', method: 'POST' };
-
-    DHCP_INTERFACES = { path: 'dhcp/interfaces', method: 'GET' };
-
-    DHCP_ADD_STATIC_LEASE = { path: 'dhcp/add_static_lease', method: 'POST' };
-
-    DHCP_REMOVE_STATIC_LEASE = { path: 'dhcp/remove_static_lease', method: 'POST' };
-
-    DHCP_UPDATE_STATIC_LEASE = { path: 'dhcp/update_static_lease', method: 'POST' };
-
-    DHCP_RESET = { path: 'dhcp/reset', method: 'POST' };
-
-    DHCP_LEASES_RESET = { path: 'dhcp/reset_leases', method: 'POST' };
-
-    getDhcpStatus() {
-        const { path, method } = this.DHCP_STATUS;
-
-        return this.makeRequest(path, method);
-    }
-
-    getDhcpInterfaces() {
-        const { path, method } = this.DHCP_INTERFACES;
-
-        return this.makeRequest(path, method);
-    }
-
-    setDhcpConfig(config: any) {
-        const { path, method } = this.DHCP_SET_CONFIG;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    findActiveDhcp(req: any) {
-        const { path, method } = this.DHCP_FIND_ACTIVE;
-        const parameters = {
-            data: req,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    addStaticLease(config: any) {
-        const { path, method } = this.DHCP_ADD_STATIC_LEASE;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    removeStaticLease(config: any) {
-        const { path, method } = this.DHCP_REMOVE_STATIC_LEASE;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    updateStaticLease(config: any) {
-        const { path, method } = this.DHCP_UPDATE_STATIC_LEASE;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    resetDhcp() {
-        const { path, method } = this.DHCP_RESET;
-
-        return this.makeRequest(path, method);
-    }
-
-    resetDhcpLeases() {
-        const { path, method } = this.DHCP_LEASES_RESET;
-
-        return this.makeRequest(path, method);
     }
 
     // Installation
@@ -373,101 +201,13 @@ class Api {
         return this.makeRequest(path, method, parameters);
     }
 
-    // DNS-over-HTTPS and DNS-over-TLS
-    TLS_STATUS = { path: 'tls/status', method: 'GET' };
-
-    TLS_CONFIG = { path: 'tls/configure', method: 'POST' };
-
-    TLS_VALIDATE = { path: 'tls/validate', method: 'POST' };
-
-    getTlsStatus() {
-        const { path, method } = this.TLS_STATUS;
-
-        return this.makeRequest(path, method);
-    }
-
-    setTlsConfig(config: any) {
-        const { path, method } = this.TLS_CONFIG;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    validateTlsConfig(config: any) {
-        const { path, method } = this.TLS_VALIDATE;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
     // Per-client settings
     GET_CLIENTS = { path: 'clients', method: 'GET' };
-
-    SEARCH_CLIENTS = { path: 'clients/search', method: 'POST' };
-
-    ADD_CLIENT = { path: 'clients/add', method: 'POST' };
-
-    DELETE_CLIENT = { path: 'clients/delete', method: 'POST' };
-
-    UPDATE_CLIENT = { path: 'clients/update', method: 'POST' };
 
     getClients() {
         const { path, method } = this.GET_CLIENTS;
 
         return this.makeRequest(path, method);
-    }
-
-    addClient(config: any) {
-        const { path, method } = this.ADD_CLIENT;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    deleteClient(config: any) {
-        const { path, method } = this.DELETE_CLIENT;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    updateClient(config: any) {
-        const { path, method } = this.UPDATE_CLIENT;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    searchClients(config: any) {
-        const { path, method } = this.SEARCH_CLIENTS;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
-    }
-
-    // DNS access settings
-    ACCESS_LIST = { path: 'access/list', method: 'GET' };
-
-    ACCESS_SET = { path: 'access/set', method: 'POST' };
-
-    getAccessList() {
-        const { path, method } = this.ACCESS_LIST;
-
-        return this.makeRequest(path, method);
-    }
-
-    setAccessList(config: any) {
-        const { path, method } = this.ACCESS_SET;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
     }
 
     // DNS rewrites
@@ -525,33 +265,6 @@ class Api {
         const { path, method } = this.REWRITE_SETTINGS;
 
         return this.makeRequest(path, method);
-    }
-
-    // Blocked services
-    BLOCKED_SERVICES_GET = { path: 'blocked_services/get', method: 'GET' };
-
-    BLOCKED_SERVICES_UPDATE = { path: 'blocked_services/update', method: 'PUT' };
-
-    BLOCKED_SERVICES_ALL = { path: 'blocked_services/all', method: 'GET' };
-
-    getAllBlockedServices() {
-        const { path, method } = this.BLOCKED_SERVICES_ALL;
-
-        return this.makeRequest(path, method);
-    }
-
-    getBlockedServices() {
-        const { path, method } = this.BLOCKED_SERVICES_GET;
-
-        return this.makeRequest(path, method);
-    }
-
-    updateBlockedServices(config: any) {
-        const { path, method } = this.BLOCKED_SERVICES_UPDATE;
-        const parameters = {
-            data: config,
-        };
-        return this.makeRequest(path, method, parameters);
     }
 
     // Settings for statistics

@@ -1,7 +1,7 @@
 import { createAction } from 'redux-actions';
 
 import apiClient from '../api/Api';
-import { normalizeTopStats, secondsToMilliseconds, getParamsForClientsSearch, addClientInfo } from '../helpers/helpers';
+import { normalizeTopStats, secondsToMilliseconds } from '../helpers/helpers';
 import { addErrorToast, addSuccessToast } from './toasts';
 
 export const getStatsConfigRequest = createAction('GET_STATS_CONFIG_REQUEST');
@@ -43,16 +43,10 @@ export const getStats = () => async (dispatch: any) => {
     dispatch(getStatsRequest());
     try {
         const stats = await apiClient.getStats();
-        const normalizedTopClients = normalizeTopStats(stats.top_clients);
-
-        const clientsParams = getParamsForClientsSearch(normalizedTopClients, 'name');
-        const clients = await apiClient.searchClients(clientsParams);
-        const topClientsWithInfo = addClientInfo(normalizedTopClients, clients, 'name');
 
         const normalizedStats = {
             ...stats,
             top_blocked_domains: normalizeTopStats(stats.top_blocked_domains),
-            top_clients: topClientsWithInfo,
             top_queried_domains: normalizeTopStats(stats.top_queried_domains),
             avg_processing_time: secondsToMilliseconds(stats.avg_processing_time),
             top_upstreams_responses: normalizeTopStats(stats.top_upstreams_responses),

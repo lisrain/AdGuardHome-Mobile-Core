@@ -6,7 +6,6 @@ import classNames from 'classnames';
 
 import Statistics from './Statistics';
 import Counters from './Counters';
-import Clients from './Clients';
 import QueriedDomains from './QueriedDomains';
 import BlockedDomains from './BlockedDomains';
 import { DISABLE_PROTECTION_TIMINGS, ONE_SECOND_IN_MS, SETTINGS_URLS, TIME_UNITS } from '../../helpers/constants';
@@ -21,32 +20,26 @@ import Dropdown from '../ui/Dropdown';
 import UpstreamResponses from './UpstreamResponses';
 
 import UpstreamAvgTime from './UpstreamAvgTime';
-import { AccessData, DashboardData, StatsData } from '../../initialState';
+import { DashboardData, StatsData } from '../../initialState';
 
 interface DashboardProps {
     dashboard: DashboardData;
     stats: StatsData;
-    access: AccessData;
     getStats: (...args: unknown[]) => unknown;
     getStatsConfig: (...args: unknown[]) => unknown;
     toggleProtection: (...args: unknown[]) => unknown;
-    getClients: (...args: unknown[]) => unknown;
-    getAccessList: () => (dispatch: any) => void;
 }
 
 const Dashboard = ({
-    getAccessList,
     getStats,
     getStatsConfig,
     dashboard: { protectionEnabled, processingProtection, protectionDisabledDuration },
     toggleProtection,
     stats,
-    access,
 }: DashboardProps) => {
     const { t } = useTranslation();
 
     const getAllStats = () => {
-        getAccessList();
         getStats();
         getStatsConfig();
     };
@@ -87,7 +80,7 @@ const Dashboard = ({
         </button>
     );
 
-    const statsProcessing = stats.processingStats || stats.processingGetConfig || access.processing;
+    const statsProcessing = stats.processingStats || stats.processingGetConfig;
 
     const subtitle = getSubtitle();
 
@@ -196,21 +189,13 @@ const Dashboard = ({
                         <Statistics
                             dnsQueries={stats.dnsQueries}
                             blockedFiltering={stats.blockedFiltering}
-                            replacedSafebrowsing={stats.replacedSafebrowsing}
-                            replacedParental={stats.replacedParental}
                             numDnsQueries={stats.numDnsQueries}
                             numBlockedFiltering={stats.numBlockedFiltering}
-                            numReplacedSafebrowsing={stats.numReplacedSafebrowsing}
-                            numReplacedParental={stats.numReplacedParental}
                         />
                     </div>
 
                     <div className="col-lg-6">
                         <Counters subtitle={subtitle} refreshButton={refreshButton} />
-                    </div>
-
-                    <div className="col-lg-6">
-                        <Clients subtitle={subtitle} refreshButton={refreshButton} />
                     </div>
 
                     <div className="col-lg-6">
@@ -227,9 +212,6 @@ const Dashboard = ({
                             subtitle={subtitle}
                             topBlockedDomains={stats.topBlockedDomains}
                             blockedFiltering={stats.numBlockedFiltering}
-                            replacedSafebrowsing={stats.numReplacedSafebrowsing}
-                            replacedSafesearch={stats.numReplacedSafesearch}
-                            replacedParental={stats.numReplacedParental}
                             refreshButton={refreshButton}
                         />
                     </div>

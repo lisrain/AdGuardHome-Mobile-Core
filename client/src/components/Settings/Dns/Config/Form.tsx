@@ -2,14 +2,13 @@ import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { validateIp, validateIpv4, validateIpv6, validateRequiredValue } from '../../../../helpers/validators';
+import { validateIp, validateRequiredValue } from '../../../../helpers/validators';
 
-import { BLOCKING_MODES, UINT32_RANGE } from '../../../../helpers/constants';
+import { UINT32_RANGE } from '../../../../helpers/constants';
 import { Checkbox } from '../../../ui/Controls/Checkbox';
 import { Input } from '../../../ui/Controls/Input';
 import { toNumber } from '../../../../helpers/form';
 import { Textarea } from '../../../ui/Controls/Textarea';
-import { Radio } from '../../../ui/Controls/Radio';
 
 type FormData = {
     ratelimit: number;
@@ -63,49 +62,6 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
         },
     ];
 
-    const customIps: {
-        name: 'blocking_ipv4' | 'blocking_ipv6';
-        label: string;
-        description: string;
-        validateIp: (value: string) => string;
-    }[] = [
-        {
-            name: 'blocking_ipv4',
-            label: t('blocking_ipv4'),
-            description: t('blocking_ipv4_desc'),
-            validateIp: validateIpv4,
-        },
-        {
-            name: 'blocking_ipv6',
-            label: t('blocking_ipv6'),
-            description: t('blocking_ipv6_desc'),
-            validateIp: validateIpv6,
-        },
-    ];
-
-    const blockingModeOptions = [
-        {
-            value: BLOCKING_MODES.default,
-            label: t('default'),
-        },
-        {
-            value: BLOCKING_MODES.refused,
-            label: t('refused'),
-        },
-        {
-            value: BLOCKING_MODES.nxdomain,
-            label: t('nxdomain'),
-        },
-        {
-            value: BLOCKING_MODES.null_ip,
-            label: t('null_ip'),
-        },
-        {
-            value: BLOCKING_MODES.custom_ip,
-            label: t('custom_ip'),
-        },
-    ];
-
     const blockingModeDescriptions = [
         t(`blocking_mode_default`),
         t(`blocking_mode_refused`),
@@ -114,7 +70,6 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
         t(`blocking_mode_custom_ip`),
     ];
 
-    const blocking_mode = watch('blocking_mode');
     const edns_cs_enabled = watch('edns_cs_enabled');
     const edns_cs_use_custom = watch('edns_cs_use_custom');
 
@@ -307,48 +262,11 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
                             ))}
                         </div>
 
-                        <div className="custom-controls-stacked">
-                            <Controller
-                                name="blocking_mode"
-                                control={control}
-                                render={({ field }) => (
-                                    <Radio {...field} options={blockingModeOptions} disabled={processing} />
-                                )}
-                            />
+                        <div data-testid="dns_config_blocking_mode">
+                            <strong>{t(initialValues?.blocking_mode || 'default')}</strong>
                         </div>
                     </div>
                 </div>
-                {blocking_mode === BLOCKING_MODES.custom_ip && (
-                    <>
-                        {customIps.map(({ label, description, name, validateIp }) => (
-                            <div className="col-12 col-sm-6" key={name}>
-                                <div className="form__group form__group--settings">
-                                    <Controller
-                                        name={name}
-                                        control={control}
-                                        rules={{
-                                            validate: {
-                                                required: validateRequiredValue,
-                                                ip: validateIp,
-                                            },
-                                        }}
-                                        render={({ field, fieldState }) => (
-                                            <Input
-                                                {...field}
-                                                data-testid="dns_config_blocked_response_ttl"
-                                                type="text"
-                                                label={label}
-                                                desc={description}
-                                                error={fieldState.error?.message}
-                                                disabled={processing}
-                                            />
-                                        )}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </>
-                )}
 
                 <div className="col-12 col-md-7">
                     <div className="form__group form__group--settings">

@@ -16,20 +16,18 @@ import {
     DEFAULT_LANGUAGE,
     DEFAULT_TIME_FORMAT,
     DETAILED_DATE_FORMAT_OPTIONS,
-    DHCP_VALUES_PLACEHOLDERS,
     FILTERED,
     FILTERED_STATUS,
     R_CLIENT_ID,
     R_IPV4,
     R_IPV6,
     STANDARD_DNS_PORT,
-    STANDARD_HTTPS_PORT,
     STANDARD_WEB_PORT,
     SPECIAL_FILTER_ID,
     THEMES,
 } from './constants';
 import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from './localStorageHelper';
-import { DhcpInterface, InstallInterface } from '../initialState';
+import { InstallInterface } from '../initialState';
 
 /**
  * @param time {string} The time to format
@@ -141,25 +139,6 @@ export const normalizeTopStats = (stats: any) =>
 
         count: Object.values(item)[0],
     }));
-
-export const addClientInfo = (data: any, clients: any, ...params: any[]) =>
-    data.map((row: any) => {
-        let info = '';
-        params.find((param) => {
-            const id = row[param];
-            if (id) {
-                const client = clients.find((item: any) => item[id]) || '';
-                info = client?.[id] ?? '';
-            }
-
-            return info;
-        });
-
-        return {
-            ...row,
-            info,
-        };
-    });
 
 export const normalizeFilters = (filters: any) =>
     filters
@@ -289,20 +268,6 @@ export const checkRedirect = (url: any, attempts: number = 1) => {
     return false;
 };
 
-export const redirectToCurrentProtocol = (values: any, httpPort = 80) => {
-    const { protocol, hostname, hash, port } = window.location;
-    const { enabled, force_https, port_https } = values;
-    const httpsPort = port_https !== STANDARD_HTTPS_PORT ? `:${port_https}` : '';
-
-    if (protocol !== 'https:' && enabled && force_https && port_https) {
-        checkRedirect(`https://${hostname}${httpsPort}/${hash}`);
-    } else if (protocol === 'https:' && enabled && port_https && port_https !== parseInt(port, 10)) {
-        checkRedirect(`https://${hostname}${httpsPort}/${hash}`);
-    } else if (protocol === 'https:' && (!enabled || !port_https)) {
-        window.location.replace(`http://${hostname}:${httpPort}/${hash}`);
-    }
-};
-
 /**
  * @param {string} text
  * @returns []string
@@ -335,36 +300,6 @@ export const trimLinesAndRemoveEmpty = (input: any) =>
         .filter(Boolean)
         .join('\n');
 
-/**
- * Normalizes the topClients array
- *
- * @param {Object[]} topClients
- * @param {string} topClients.name
- * @param {number} topClients.count
- * @param {Object} topClients.info
- * @param {string} topClients.info.name
- * @returns {Object} normalizedTopClients
- * @returns {Object.<string, number>} normalizedTopClients.auto - auto clients
- * @returns {Object.<string, number>} normalizedTopClients.configured - configured clients
- */
-export const normalizeTopClients = (topClients: any) =>
-    topClients.reduce(
-        (acc: any, clientObj: any) => {
-            const {
-                name,
-                count,
-                info: { name: infoName },
-            } = clientObj;
-            acc.auto[name] = count;
-            acc.configured[infoName] = count;
-            return acc;
-        },
-        {
-            auto: {},
-            configured: {},
-        },
-    );
-
 export const sortClients = (clients: any) => {
     const compare = (a: any, b: any) => {
         const nameA = a.name.toUpperCase();
@@ -381,10 +316,6 @@ export const sortClients = (clients: any) => {
     };
 
     return clients.sort(compare);
-};
-
-export const toggleAllServices = (services: any, change: any, isSelected: any) => {
-    services.forEach((service: any) => change(`blocked_services.${service.id}`, isSelected));
 };
 
 export const msToSeconds = (milliseconds: any) => Math.floor(milliseconds / 1000);
@@ -435,20 +366,6 @@ export const getPathWithQueryString = (path: any, params: any) => {
     return `${path}?${searchParams.toString()}`;
 };
 
-export const getParamsForClientsSearch = (data: any, param: any, additionalParam?: any) => {
-    const clients = new Set();
-    data.forEach((e: any) => {
-        clients.add(e[param]);
-        if (e[additionalParam]) {
-            clients.add(e[additionalParam]);
-        }
-    });
-
-    return {
-        clients: Array.from(clients).map((id) => ({ id })),
-    };
-};
-
 /**
  * Creates onBlur handler that can normalize input if normalization function is specified
  *
@@ -468,10 +385,6 @@ export const checkBlackList = (reason: any) => reason === FILTERED_STATUS.FILTER
 export const checkWhiteList = (reason: any) => reason === FILTERED_STATUS.NOT_FILTERED_WHITE_LIST;
 // eslint-disable-next-line max-len
 export const checkNotFilteredNotFound = (reason: any) => reason === FILTERED_STATUS.NOT_FILTERED_NOT_FOUND;
-export const checkSafeSearch = (reason: any) => reason === FILTERED_STATUS.FILTERED_SAFE_SEARCH;
-export const checkSafeBrowsing = (reason: any) => reason === FILTERED_STATUS.FILTERED_SAFE_BROWSING;
-export const checkParental = (reason: any) => reason === FILTERED_STATUS.FILTERED_PARENTAL;
-export const checkBlockedService = (reason: any) => reason === FILTERED_STATUS.FILTERED_BLOCKED_SERVICE;
 
 export const getCurrentFilter = (url: any, filters: any) => {
     const filter = filters?.find((item: any) => url === item.url);
@@ -917,14 +830,6 @@ export const getSpecialFilterName = (filterId: any) => {
             return i18n.t('custom_filter_rules');
         case SPECIAL_FILTER_ID.SYSTEM_HOSTS:
             return i18n.t('system_host_files');
-        case SPECIAL_FILTER_ID.BLOCKED_SERVICES:
-            return i18n.t('blocked_services');
-        case SPECIAL_FILTER_ID.PARENTAL:
-            return i18n.t('parental_control');
-        case SPECIAL_FILTER_ID.SAFE_BROWSING:
-            return i18n.t('safe_browsing');
-        case SPECIAL_FILTER_ID.SAFE_SEARCH:
-            return i18n.t('safe_search');
         default:
             return i18n.t('unknown_filter', { filterId });
     }
@@ -1008,65 +913,6 @@ export const getRulesToFilterList = (
     );
 };
 
-/**
- * @param ip {string}
- * @param gateway_ip {string}
- * @returns {{range_end: string, subnet_mask: string, range_start: string,
- * lease_duration: string, gateway_ip: string}}
- */
-export const calculateDhcpPlaceholdersIpv4 = (ip: string, gateway_ip: string) => {
-    const LAST_OCTET_IDX = 3;
-    const LAST_OCTET_RANGE_START = 100;
-    const LAST_OCTET_RANGE_END = 200;
-
-    const addr = ipaddr.parse(ip) as IPv4;
-
-    addr.octets[LAST_OCTET_IDX] = LAST_OCTET_RANGE_START;
-    const range_start = addr.toString();
-
-    addr.octets[LAST_OCTET_IDX] = LAST_OCTET_RANGE_END;
-    const range_end = addr.toString();
-
-    const { subnet_mask, lease_duration } = DHCP_VALUES_PLACEHOLDERS.ipv4;
-
-    return {
-        gateway_ip: gateway_ip || ip,
-        subnet_mask,
-        range_start,
-        range_end,
-        lease_duration,
-    };
-};
-
-export const calculateDhcpPlaceholdersIpv6 = () => {
-    const { range_start, range_end, lease_duration } = DHCP_VALUES_PLACEHOLDERS.ipv6;
-
-    return {
-        range_start,
-        range_end,
-        lease_duration,
-    };
-};
-
-/**
- * Add ip_addresses property - concatenated ipv4_addresses and ipv6_addresses for every interface
- * @param interfaces
- * @param interfaces.ipv4_addresses {string[]}
- * @param interfaces.ipv6_addresses {string[]}
- * @returns interfaces Interfaces enriched with ip_addresses property
- */
-
-export const enrichWithConcatenatedIpAddresses = (interfaces: DhcpInterface[]) =>
-    Object.entries(interfaces)
-
-        .reduce((acc: any, [k, v]) => {
-            const ipv4_addresses = v.ipv4_addresses ?? [];
-            const ipv6_addresses = v.ipv6_addresses ?? [];
-
-            acc[k].ip_addresses = ipv4_addresses.concat(ipv6_addresses);
-            return acc;
-        }, interfaces);
-
 export const isScrolledIntoView = (el: any) => {
     const rect = el.getBoundingClientRect();
     const elemTop = rect.top;
@@ -1076,47 +922,8 @@ export const isScrolledIntoView = (el: any) => {
 };
 
 /**
- * If this is a manually created client, return its name.
- * If this is a "runtime" client, return it's IP address.
- * @param clients {Array.<object>}
- * @param ip {string}
- * @returns {string}
- */
-export const getBlockingClientName = (clients: any, ip: any) => {
-    for (let i = 0; i < clients.length; i += 1) {
-        const client = clients[i];
-
-        if (client.ids.includes(ip)) {
-            return client.name;
-        }
-    }
-    return ip;
-};
-
-/**
  * @param {string[]} lines
  * @returns {string[]}
  */
 export const filterOutComments = (lines: any) =>
     lines.filter((line: any) => !line.startsWith(COMMENT_LINE_DEFAULT_TOKEN));
-
-/**
- * @param {array} services
- * @param {string} id
- * @returns {string}
- */
-export const getService = (services: any, id: any) => services.find((s: any) => s.id === id);
-
-/**
- * @param {array} services
- * @param {string} id
- * @returns {string}
- */
-export const getServiceName = (services: any, id: any) => getService(services, id)?.name;
-
-/**
- * @param {array} services
- * @param {string} id
- * @returns {string}
- */
-export const getServiceIcon = (services: any, id: any) => getService(services, id)?.icon_svg;

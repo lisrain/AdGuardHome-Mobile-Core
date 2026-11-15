@@ -25,25 +25,13 @@ const CountCell = (totalBlocked: any) =>
 interface BlockedDomainsProps {
     topBlockedDomains: unknown[];
     blockedFiltering: number;
-    replacedSafebrowsing: number;
-    replacedSafesearch: number;
-    replacedParental: number;
     refreshButton: React.ReactNode;
     subtitle: string;
     t: TFunction;
 }
 
-const BlockedDomains = ({
-    t,
-    refreshButton,
-    topBlockedDomains,
-    subtitle,
-    blockedFiltering,
-    replacedSafebrowsing,
-    replacedParental,
-    replacedSafesearch,
-}: BlockedDomainsProps) => {
-    const totalBlocked = blockedFiltering + replacedSafebrowsing + replacedParental + replacedSafesearch;
+const BlockedDomains = ({ t, refreshButton, topBlockedDomains, subtitle, blockedFiltering }: BlockedDomainsProps) => {
+    const totalBlocked = blockedFiltering;
 
     return (
         <Card title={t('top_blocked_domains')} subtitle={subtitle} bodyType="card-table" refresh={refreshButton}>

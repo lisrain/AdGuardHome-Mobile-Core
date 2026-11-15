@@ -45,15 +45,6 @@ export const HTML_PAGES = {
     MAIN: '/',
 };
 
-export const STATS_NAMES = {
-    avg_processing_time: 'average_processing_time',
-    blocked_filtering: 'Blocked by filters',
-    dns_queries: 'DNS queries',
-    replaced_parental: 'stats_adult',
-    replaced_safebrowsing: 'stats_malware_phishing',
-    replaced_safesearch: 'enforced_save_search',
-};
-
 export const STATUS_COLORS = {
     blue: '#467fcf',
     red: '#cd201f',
@@ -80,13 +71,6 @@ export const ADDRESS_IN_USE_TEXT = 'address already in use';
 
 export const INSTALL_FIRST_STEP = 1;
 export const INSTALL_TOTAL_STEPS = 5;
-
-export const SETTINGS_NAMES = {
-    filtering: 'filtering',
-    safebrowsing: 'safebrowsing',
-    parental: 'parental',
-    safesearch: 'safesearch',
-};
 
 export const STANDARD_DNS_PORT = 53;
 export const STANDARD_WEB_PORT = 80;
@@ -126,29 +110,16 @@ export const MODAL_TYPE = {
     CHOOSE_FILTERING_LIST: 'CHOOSE_FILTERING_LIST',
     ADD_REWRITE: 'ADD_REWRITE',
     EDIT_REWRITE: 'EDIT_REWRITE',
-    EDIT_LEASE: 'EDIT_LEASE',
-    ADD_LEASE: 'ADD_LEASE',
-    ADD_CLIENT: 'ADD_CLIENT',
-    EDIT_CLIENT: 'EDIT_CLIENT',
-};
-
-export const CLIENT_ID = {
-    MAC: 'mac',
-    IP: 'ip',
 };
 
 export const MENU_URLS = {
     root: '/',
     logs: '/logs',
-    guide: '/guide',
 };
 
 export const SETTINGS_URLS = {
-    encryption: '/encryption',
-    dhcp: '/dhcp',
     dns: '/dns',
     settings: '/settings',
-    clients: '/clients',
 };
 
 export const FILTERS_URLS = {
@@ -156,12 +127,6 @@ export const FILTERS_URLS = {
     dns_allowlists: '/dns_allowlists',
     dns_rewrites: '/dns_rewrites',
     custom_rules: '/custom_rules',
-    blocked_services: '/blocked_services',
-};
-
-export const ENCRYPTION_SOURCE = {
-    PATH: 'path',
-    CONTENT: 'content',
 };
 
 export const FILTERED = 'Filtered';
@@ -221,19 +186,13 @@ export const DEFAULT_LANGUAGE = 'en';
 
 export const QUERY_LOGS_PAGE_LIMIT = 20;
 
-export const LEASES_TABLE_DEFAULT_PAGE_SIZE = 20;
-
 export const FILTERED_STATUS = {
     FILTERED_BLACK_LIST: 'FilteredBlackList',
     NOT_FILTERED_WHITE_LIST: 'NotFilteredWhiteList',
     NOT_FILTERED_NOT_FOUND: 'NotFilteredNotFound',
-    FILTERED_BLOCKED_SERVICE: 'FilteredBlockedService',
     REWRITE: 'Rewrite',
     REWRITE_HOSTS: 'RewriteEtcHosts',
     REWRITE_RULE: 'RewriteRule',
-    FILTERED_SAFE_SEARCH: 'FilteredSafeSearch',
-    FILTERED_SAFE_BROWSING: 'FilteredSafeBrowsing',
-    FILTERED_PARENTAL: 'FilteredParental',
 };
 
 export const RESPONSE_FILTER = {
@@ -253,18 +212,6 @@ export const RESPONSE_FILTER = {
         QUERY: 'blocked',
         LABEL: 'show_blocked_responses',
     },
-    BLOCKED_SERVICES: {
-        QUERY: 'blocked_services',
-        LABEL: 'blocked_services',
-    },
-    BLOCKED_THREATS: {
-        QUERY: 'blocked_safebrowsing',
-        LABEL: 'blocked_threats',
-    },
-    BLOCKED_ADULT_WEBSITES: {
-        QUERY: 'blocked_parental',
-        LABEL: 'blocked_adult_websites',
-    },
     ALLOWED: {
         QUERY: 'whitelisted',
         LABEL: 'allowed',
@@ -272,10 +219,6 @@ export const RESPONSE_FILTER = {
     REWRITTEN: {
         QUERY: 'rewritten',
         LABEL: 'rewritten',
-    },
-    SAFE_SEARCH: {
-        QUERY: 'safe_search',
-        LABEL: 'safe_search',
     },
 };
 
@@ -311,14 +254,6 @@ export const FILTERED_STATUS_TO_META_MAP = {
         LABEL: RESPONSE_FILTER.PROCESSED.LABEL,
         COLOR: QUERY_STATUS_COLORS.WHITE,
     },
-    [FILTERED_STATUS.FILTERED_BLOCKED_SERVICE]: {
-        LABEL: 'blocked_service',
-        COLOR: QUERY_STATUS_COLORS.RED,
-    },
-    [FILTERED_STATUS.FILTERED_SAFE_SEARCH]: {
-        LABEL: RESPONSE_FILTER.SAFE_SEARCH.LABEL,
-        COLOR: QUERY_STATUS_COLORS.YELLOW,
-    },
     [FILTERED_STATUS.FILTERED_BLACK_LIST]: {
         LABEL: RESPONSE_FILTER.BLOCKED.LABEL,
         COLOR: QUERY_STATUS_COLORS.RED,
@@ -334,14 +269,6 @@ export const FILTERED_STATUS_TO_META_MAP = {
     [FILTERED_STATUS.REWRITE_RULE]: {
         LABEL: RESPONSE_FILTER.REWRITTEN.LABEL,
         COLOR: QUERY_STATUS_COLORS.BLUE,
-    },
-    [FILTERED_STATUS.FILTERED_SAFE_BROWSING]: {
-        LABEL: RESPONSE_FILTER.BLOCKED_THREATS.LABEL,
-        COLOR: QUERY_STATUS_COLORS.YELLOW,
-    },
-    [FILTERED_STATUS.FILTERED_PARENTAL]: {
-        LABEL: RESPONSE_FILTER.BLOCKED_ADULT_WEBSITES.LABEL,
-        COLOR: QUERY_STATUS_COLORS.YELLOW,
     },
 };
 
@@ -373,10 +300,6 @@ export const DETAILED_DATE_FORMAT_OPTIONS = {
 export const SPECIAL_FILTER_ID = {
     CUSTOM_FILTERING_RULES: 0,
     SYSTEM_HOSTS: -1,
-    BLOCKED_SERVICES: -2,
-    PARENTAL: -3,
-    SAFE_BROWSING: -4,
-    SAFE_SEARCH: -5,
 };
 
 export const BLOCK_ACTIONS = {
@@ -398,38 +321,8 @@ export const DNS_REQUEST_OPTIONS = {
     LOAD_BALANCING: 'load_balance',
 };
 
-export const DHCP_FORM_NAMES = {
-    DHCPv4: 'dhcpv4',
-    DHCPv6: 'dhcpv6',
-    DHCP_INTERFACES: 'dhcpInterfaces',
-};
-
-export const FORM_NAME = {
-    UPSTREAM: 'upstream',
-    DOMAIN_CHECK: 'domainCheck',
-    FILTER: 'filter',
-    REWRITES: 'rewrites',
-    LOGS_FILTER: 'logsFilter',
-    CLIENT: 'client',
-    LEASE: 'lease',
-    ACCESS: 'access',
-    BLOCKING_MODE: 'blockingMode',
-    ENCRYPTION: 'encryption',
-    FILTER_CONFIG: 'filterConfig',
-    LOG_CONFIG: 'logConfig',
-    SERVICES: 'services',
-    STATS_CONFIG: 'statsConfig',
-    INSTALL: 'install',
-    LOGIN: 'login',
-    CACHE: 'cache',
-    MOBILE_CONFIG: 'mobileConfig',
-    ...DHCP_FORM_NAMES,
-};
-
 export const SMALL_SCREEN_SIZE = 767;
 export const MEDIUM_SCREEN_SIZE = 1024;
-
-export const SECONDS_IN_DAY = 60 * 60 * 24;
 
 export const UINT32_RANGE = {
     MIN: 0,
@@ -439,33 +332,6 @@ export const UINT32_RANGE = {
 export const RETENTION_RANGE = {
     MIN: 1,
     MAX: 365 * 24,
-};
-
-export const DHCP_VALUES_PLACEHOLDERS = {
-    ipv4: {
-        subnet_mask: '255.255.255.0',
-        lease_duration: SECONDS_IN_DAY.toString(),
-    },
-    ipv6: {
-        range_start: '2001::1',
-        range_end: 'ff',
-        lease_duration: SECONDS_IN_DAY.toString(),
-    },
-};
-
-export const DHCP_DESCRIPTION_PLACEHOLDERS = {
-    ipv4: {
-        gateway_ip: 'dhcp_form_gateway_input',
-        subnet_mask: 'dhcp_form_subnet_input',
-        range_start: 'dhcp_form_range_start',
-        range_end: 'dhcp_form_range_end',
-        lease_duration: 'dhcp_form_lease_input',
-    },
-    ipv6: {
-        range_start: 'dhcp_form_range_start',
-        range_end: 'dhcp_form_range_end',
-        lease_duration: 'dhcp_form_lease_input',
-    },
 };
 
 export const TOAST_TRANSITION_TIMEOUT = 500;
