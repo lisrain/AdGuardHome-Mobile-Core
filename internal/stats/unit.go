@@ -415,7 +415,6 @@ func (s *StatsCtx) getData(limit uint32) (resp *StatsResp, ok bool) {
 			TimeUnits: "days",
 
 			TopBlocked:            []topAddrs{},
-			TopClients:            []topAddrs{},
 			TopQueried:            []topAddrs{},
 			TopUpstreamsResponses: []topAddrs{},
 			TopUpstreamsAvgTime:   []topAddrsFloat{},
@@ -444,7 +443,6 @@ func (s *StatsCtx) dataFromUnits(units []*unitDB, curID uint32) (resp *StatsResp
 		TopBlocked:            topsCollector(units, maxDomains, s.ignored, func(u *unitDB) (pairs []countPair) { return u.BlockedDomains }),
 		TopUpstreamsResponses: topUpstreamsResponses,
 		TopUpstreamsAvgTime:   topUpstreamsAvgTime,
-		TopClients:            topsCollector(units, maxClients, nil, topClientPairs(s)),
 	}
 
 	s.fillCollectedStats(resp, units, curID)

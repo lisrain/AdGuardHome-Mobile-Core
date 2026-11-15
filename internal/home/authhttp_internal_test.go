@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghuser"
 	"github.com/AdguardTeam/golibs/httphdr"
 	"github.com/AdguardTeam/golibs/testutil"
@@ -323,10 +322,6 @@ func TestAuthMiddlewareDefault_public(t *testing.T) {
 		req:      httptest.NewRequest(http.MethodGet, "/control/login", nil),
 		name:     "public_login",
 		wantCode: http.StatusOK,
-	}, {
-		req:      httptest.NewRequest(http.MethodGet, "/apple/doh.mobileconfig", nil),
-		name:     "public_doh_config",
-		wantCode: http.StatusOK,
 	}}
 
 	for _, tc := range testCases {
@@ -381,17 +376,10 @@ func TestAuth_ServeHTTP_firstRun(t *testing.T) {
 	mux := http.NewServeMux()
 	httpReg := aghhttp.NewDefaultRegistrar(mux, mw.wrap)
 
-	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	m, err := aghtls.NewDefaultManager(ctx, &aghtls.DefaultManagerConfig{
-		Logger: testLogger,
-	})
-	require.NoError(t, err)
-
 	web := newTestWeb(t, &webConfig{
 		mux:        mux,
 		httpReg:    httpReg,
 		isFirstRun: true,
-		tlsManager: m,
 	})
 
 	mw.set(web)
@@ -404,16 +392,6 @@ func TestAuth_ServeHTTP_firstRun(t *testing.T) {
 	}{{
 		name:     "root",
 		path:     "/",
-		method:   http.MethodGet,
-		wantCode: http.StatusFound,
-	}, {
-		name:     "doh_mobileconfig",
-		path:     "/apple/doh.mobileconfig",
-		method:   http.MethodGet,
-		wantCode: http.StatusFound,
-	}, {
-		name:     "dot_mobileconfig",
-		path:     "/apple/dot.mobileconfig",
 		method:   http.MethodGet,
 		wantCode: http.StatusFound,
 	}, {
@@ -506,12 +484,6 @@ func TestAuth_ServeHTTP_auth(t *testing.T) {
 	baseMux := http.NewServeMux()
 	httpReg := aghhttp.NewDefaultRegistrar(baseMux, mw.wrap)
 
-	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	m, err := aghtls.NewDefaultManager(ctx, &aghtls.DefaultManagerConfig{
-		Logger: testLogger,
-	})
-	require.NoError(t, err)
-
 	auth, err := newAuth(testutil.ContextWithTimeout(t, testTimeout), &authConfig{
 		baseLogger:      testLogger,
 		rateLimiter:     emptyRateLimiter{},
@@ -527,10 +499,9 @@ func TestAuth_ServeHTTP_auth(t *testing.T) {
 	t.Cleanup(func() { auth.close(testutil.ContextWithTimeout(t, testTimeout)) })
 
 	web := newTestWeb(t, &webConfig{
-		tlsManager: m,
-		auth:       auth,
-		mux:        baseMux,
-		httpReg:    httpReg,
+		auth:    auth,
+		mux:     baseMux,
+		httpReg: httpReg,
 	})
 	require.NoError(t, err)
 
@@ -677,17 +648,10 @@ func TestAuth_ServeHTTP_logout(t *testing.T) {
 
 	t.Cleanup(func() { auth.close(testutil.ContextWithTimeout(t, testTimeout)) })
 
-	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	m, err := aghtls.NewDefaultManager(ctx, &aghtls.DefaultManagerConfig{
-		Logger: testLogger,
-	})
-	require.NoError(t, err)
-
 	web := newTestWeb(t, &webConfig{
-		auth:       auth,
-		mux:        baseMux,
-		httpReg:    httpReg,
-		tlsManager: m,
+		auth:    auth,
+		mux:     baseMux,
+		httpReg: httpReg,
 	})
 
 	mw.set(web)

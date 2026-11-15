@@ -299,16 +299,13 @@ func TestServer_ServeDNS_dns64(t *testing.T) {
 					UDPListenAddrs:    []*net.UDPAddr{{}},
 					TCPListenAddrs:    []*net.TCPAddr{{}},
 					UseDNS64:          true,
-					TLSConf:           &TLSConfig{},
 					UpstreamMode:      proxy.UpstreamModeLoadBalance,
 					EDNSClientSubnet:  &EDNSClientSubnet{Enabled: false},
 					ClientsContainer:  EmptyClientsContainer{},
 					UpstreamDNS:       []string{upsAddr},
 					UsePrivateRDNS:    true,
 					LocalPTRResolvers: []string{localUpsAddr},
-					ServePlainDNS:     true,
 				},
-				testTLSManager,
 			)
 
 			startDeferStop(t, s)
@@ -342,16 +339,13 @@ func TestServer_dns64WithDisabledRDNS(t *testing.T) {
 			UDPListenAddrs:    []*net.UDPAddr{{}},
 			TCPListenAddrs:    []*net.TCPAddr{{}},
 			UseDNS64:          true,
-			TLSConf:           &TLSConfig{},
 			UpstreamMode:      proxy.UpstreamModeLoadBalance,
 			EDNSClientSubnet:  &EDNSClientSubnet{Enabled: false},
 			ClientsContainer:  EmptyClientsContainer{},
 			UpstreamDNS:       []string{upsAddr},
 			UsePrivateRDNS:    false,
 			LocalPTRResolvers: []string{localUpsAddr},
-			ServePlainDNS:     true,
 		},
-		testTLSManager,
 	)
 	startDeferStop(t, s)
 

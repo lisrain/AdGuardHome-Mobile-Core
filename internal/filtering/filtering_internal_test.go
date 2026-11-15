@@ -13,7 +13,6 @@ import (
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/AdguardTeam/golibs/testutil"
-	"github.com/AdguardTeam/urlfilter/rules"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,9 +40,7 @@ func newForTest(t testing.TB, c *Config, filters []Filter) (f *DNSFilter, setts 
 		c.Logger = cmp.Or(c.Logger, testLogger)
 		c.SafeBrowsingCacheSize = 10000
 		c.ParentalCacheSize = 10000
-		c.SafeSearchCacheSize = 1000
 		c.CacheTime = 30
-		setts.SafeSearchEnabled = c.SafeSearchConf.Enabled
 		setts.SafeBrowsingEnabled = c.SafeBrowsingEnabled
 		setts.ParentalEnabled = c.ParentalEnabled
 	} else {
@@ -591,92 +588,6 @@ func TestWhitelist(t *testing.T) {
 	require.Len(t, res.Rules, 1)
 
 	assert.Equal(t, "||host2^", res.Rules[0].Text)
-}
-
-// Client Settings.
-
-func applyClientSettings(setts *Settings) {
-	setts.FilteringEnabled = false
-	setts.ParentalEnabled = false
-	setts.SafeBrowsingEnabled = true
-
-	rule, _ := rules.NewNetworkRule("||facebook.com^", 0)
-	s := ServiceEntry{}
-	s.Name = "facebook"
-	s.Rules = []*rules.NetworkRule{rule}
-	setts.ServicesRules = append(setts.ServicesRules, s)
-}
-
-func TestClientSettings(t *testing.T) {
-	d, setts := newForTest(
-		t,
-		&Config{
-			ParentalEnabled:        true,
-			SafeBrowsingEnabled:    false,
-			SafeBrowsingChecker:    newChecker(sbBlocked),
-			ParentalControlChecker: newChecker(pcBlocked),
-		},
-		[]Filter{{
-			ID: 0, Data: []byte("||example.org^\n"),
-		}},
-	)
-	t.Cleanup(d.Close)
-
-	type testCase struct {
-		name       string
-		host       string
-		before     bool
-		wantReason Reason
-	}
-	testCases := []testCase{{
-		name:       "filters",
-		host:       "example.org",
-		before:     true,
-		wantReason: FilteredBlockList,
-	}, {
-		name:       "parental",
-		host:       pcBlocked,
-		before:     true,
-		wantReason: FilteredParental,
-	}, {
-		name:       "safebrowsing",
-		host:       sbBlocked,
-		before:     false,
-		wantReason: FilteredSafeBrowsing,
-	}, {
-		name:       "additional_rules",
-		host:       "facebook.com",
-		before:     false,
-		wantReason: FilteredBlockedService,
-	}}
-
-	makeTester := func(tc testCase, before bool) func(t *testing.T) {
-		return func(t *testing.T) {
-			t.Helper()
-
-			r, err := d.CheckHost(tc.host, dns.TypeA, setts)
-			require.NoError(t, err)
-
-			if before {
-				assert.True(t, r.IsFiltered)
-				assert.Equal(t, tc.wantReason, r.Reason)
-			} else {
-				assert.False(t, r.IsFiltered)
-			}
-		}
-	}
-
-	// Check behaviour without any per-client settings, then apply per-client
-	// settings and check behavior once again.
-	for _, tc := range testCases {
-		t.Run(tc.name, makeTester(tc, tc.before))
-	}
-
-	applyClientSettings(setts)
-
-	for _, tc := range testCases {
-		t.Run(tc.name, makeTester(tc, !tc.before))
-	}
 }
 
 func BenchmarkSafeBrowsing(b *testing.B) {

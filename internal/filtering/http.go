@@ -552,11 +552,6 @@ func (d *DNSFilter) handleCheckHost(w http.ResponseWriter, r *http.Request) {
 		// multiple client names.  This will handle the case when a rule exists
 		// but the persistent client does not.
 		d.ApplyAdditionalFiltering(netip.Addr{}, cli, setts)
-	} else {
-		// Apply blocked services filtering even if the client is not known,
-		// because blocked services rules don't depend on the client and should
-		// be applied regardless of whether the client is known or not.
-		d.ApplyBlockedServices(setts)
 	}
 
 	result, err := d.CheckHost(host, qType, setts)
@@ -706,19 +701,12 @@ func (d *DNSFilter) RegisterFilteringHandlers() {
 	registerHTTP(http.MethodPost, "/control/parental/disable", d.handleParentalDisable)
 	registerHTTP(http.MethodGet, "/control/parental/status", d.handleParentalStatus)
 
-	registerHTTP(http.MethodGet, "/control/safesearch/status", d.handleSafeSearchStatus)
-	registerHTTP(http.MethodPut, "/control/safesearch/settings", d.handleSafeSearchSettings)
-
 	registerHTTP(http.MethodGet, "/control/rewrite/list", d.handleRewriteList)
 	registerHTTP(http.MethodGet, "/control/rewrite/settings", d.handleRewriteSettings)
 	registerHTTP(http.MethodPost, "/control/rewrite/add", d.handleRewriteAdd)
 	registerHTTP(http.MethodPost, "/control/rewrite/delete", d.handleRewriteDelete)
 	registerHTTP(http.MethodPut, "/control/rewrite/settings/update", d.handleRewriteSettingsUpdate)
 	registerHTTP(http.MethodPut, "/control/rewrite/update", d.handleRewriteUpdate)
-
-	registerHTTP(http.MethodGet, "/control/blocked_services/all", d.handleBlockedServicesAll)
-	registerHTTP(http.MethodGet, "/control/blocked_services/get", d.handleBlockedServicesGet)
-	registerHTTP(http.MethodPut, "/control/blocked_services/update", d.handleBlockedServicesUpdate)
 
 	registerHTTP(http.MethodGet, "/control/filtering/status", d.handleFilteringStatus)
 	registerHTTP(http.MethodPost, "/control/filtering/config", d.handleFilteringConfig)

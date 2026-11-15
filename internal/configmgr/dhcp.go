@@ -27,8 +27,7 @@ type DHCPConfig struct {
 	// when LocalDomainName is "lan".  It must be a valid domain name if it is
 	// not empty.
 	//
-	// TODO(e.burkov):  Probably, remove this field.  See the TODO on
-	// [dhcpd.Interface.Enabled].
+	// TODO(e.burkov):  Probably, remove this field.
 	LocalDomainName string `yaml:"local_domain_name"`
 
 	// Enabled defines if the DHCP server is enabled.

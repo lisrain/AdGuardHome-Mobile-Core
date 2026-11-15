@@ -76,10 +76,6 @@ const (
 	resultCodeError
 )
 
-// ddrHostFQDN is the FQDN used in Discovery of Designated Resolvers (DDR) requests.
-// See https://www.ietf.org/archive/id/draft-ietf-add-ddr-06.html.
-const ddrHostFQDN = "_dns.resolver.arpa."
-
 // mozillaFQDN is the domain used to signal the Firefox browser to not use its
 // own DoH server.
 //
@@ -162,121 +158,6 @@ func (s *Server) processClientIP(ctx context.Context, l *slog.Logger, addr netip
 	defer s.serverLock.RUnlock()
 
 	s.addrProc.Process(ctx, addr)
-}
-
-// processDDRQuery responds to Discovery of Designated Resolvers (DDR) SVCB
-// queries.  The response contains different types of encryption supported by
-// current user configuration.  l and dctx must not be nil.
-//
-// See https://www.ietf.org/archive/id/draft-ietf-add-ddr-10.html.
-func (s *Server) processDDRQuery(
-	ctx context.Context,
-	l *slog.Logger,
-	dctx *dnsContext,
-) (rc resultCode) {
-	l.DebugContext(ctx, "started processing ddr")
-	defer l.DebugContext(ctx, "finished processing ddr")
-
-	if !s.conf.HandleDDR {
-		return resultCodeSuccess
-	}
-
-	pctx := dctx.proxyCtx
-	q := pctx.Req.Question[0]
-	if q.Name == ddrHostFQDN {
-		pctx.Res = s.makeDDRResponse(pctx.Req)
-
-		return resultCodeFinish
-	}
-
-	return resultCodeSuccess
-}
-
-// makeDDRResponse creates a DDR answer based on the server configuration.  The
-// constructed SVCB resource records have the priority of 1 for each entry,
-// similar to examples provided by the [draft standard].
-//
-// TODO(a.meshkov):  Consider setting the priority values based on the protocol.
-// TODO(m.kazantsev):  Actually use the effective DoH routes configuration for
-// DDR advertisements.
-//
-// [draft standard]: https://www.ietf.org/archive/id/draft-ietf-add-ddr-10.html.
-func (s *Server) makeDDRResponse(req *dns.Msg) (resp *dns.Msg) {
-	resp = s.replyCompressed(req)
-	if req.Question[0].Qtype != dns.TypeSVCB {
-		return resp
-	}
-
-	// TODO(e.burkov):  Think about storing the FQDN version of the server's
-	// name somewhere.
-	domainName := dns.Fqdn(s.conf.TLSConf.ServerName)
-
-	for _, addr := range s.conf.TLSConf.HTTPSListenAddrs {
-		values := []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"h2"}},
-			&dns.SVCBPort{Port: addr.Port()},
-			&dns.SVCBDoHPath{Template: "/dns-query{?dns}"},
-		}
-
-		ans := &dns.SVCB{
-			Hdr:      s.hdr(req, dns.TypeSVCB),
-			Priority: 1,
-			Target:   domainName,
-			Value:    values,
-		}
-
-		resp.Answer = append(resp.Answer, ans)
-	}
-
-	s.appendDoTResolvers(req, resp, domainName)
-
-	for _, addr := range s.conf.TLSConf.QUICListenAddrs {
-		values := []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"doq"}},
-			&dns.SVCBPort{Port: uint16(addr.Port)},
-		}
-
-		ans := &dns.SVCB{
-			Hdr:      s.hdr(req, dns.TypeSVCB),
-			Priority: 1,
-			Target:   domainName,
-			Value:    values,
-		}
-
-		resp.Answer = append(resp.Answer, ans)
-	}
-
-	return resp
-}
-
-// appendDoTResolvers appends DNS-over-TLS SVCB resolver entries to resp if the
-// server's TLS certificate contains IP addresses.  req and resp must not be
-// nil.
-func (s *Server) appendDoTResolvers(req, resp *dns.Msg, domainName string) {
-	if !s.tlsManager.HasIPAddrs() {
-		return
-	}
-
-	// Only add DNS-over-TLS resolvers in case the certificate contains IP
-	// addresses.
-	//
-	// See https://github.com/AdguardTeam/AdGuardHome/issues/4927.
-	for _, addr := range s.conf.TLSConf.TLSListenAddrs {
-		values := []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"dot"}},
-			&dns.SVCBPort{Port: uint16(addr.Port)},
-		}
-
-		ans := &dns.SVCB{
-			Hdr:      s.hdr(req, dns.TypeSVCB),
-			Priority: 1,
-			Target:   domainName,
-			Value:    values,
-		}
-
-		resp.Answer = append(resp.Answer, ans)
-
-	}
 }
 
 // processDHCPHosts respond to A requests if the target hostname is known to
@@ -417,8 +298,6 @@ func (s *Server) processFilteringBeforeRequest(
 		// so disable redundant filters.
 		dctx.setts.ParentalEnabled = false
 		dctx.setts.SafeBrowsingEnabled = false
-		dctx.setts.SafeSearchEnabled = false
-		dctx.setts.ServicesRules = nil
 	}
 
 	if dctx.proxyCtx.Res != nil {

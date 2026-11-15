@@ -40,7 +40,6 @@ func newTestWeb(
 		updater:        conf.updater,
 		opts:           conf.opts,
 		baseLogger:     testLogger,
-		tlsManager:     conf.tlsManager,
 		auth:           conf.auth,
 		mux:            cmp.Or(conf.mux, http.NewServeMux()),
 		configModifier: cmp.Or[agh.ConfigModifier](conf.configModifier, &agh.EmptyConfigModifier{}),
@@ -64,8 +63,7 @@ func newTestWeb(
 //   - [globalContext.clients.storage]
 //   - [globalContext.dnsServer]
 //
-// TODO(s.chzhen):  Remove this once the TLS manager no longer accesses global
-// variables.  Make tests that use this helper concurrent.
+// TODO(s.chzhen):  Make tests that use this helper concurrent.
 func storeGlobals(tb testing.TB) {
 	tb.Helper()
 

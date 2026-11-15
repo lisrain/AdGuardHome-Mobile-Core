@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"net/http"
 	"net/netip"
 	"runtime"
 	"slices"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghslog"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/configmgr"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
@@ -137,10 +135,6 @@ type Server struct {
 	// PTR resolving.
 	sysResolvers SystemResolvers
 
-	// tlsManager provides TLS configuration for the server.  It must not
-	// be nil.
-	tlsManager aghtls.Manager
-
 	// access drops disallowed clients.  It is an atomic pointer to avoid
 	// reacquiring serverLock during client lookups in query accounting.
 	access atomic.Pointer[accessManager]
@@ -223,10 +217,6 @@ type DNSCreateParams struct {
 	// initialize upstream configuration.
 	EtcHosts *aghnet.HostsContainer
 
-	// TLSManager provides a TLS configuration for the server.  It must
-	// not be nil.
-	TLSManager aghtls.Manager
-
 	// Logger is used as a base logger.  It must not be nil.
 	Logger *slog.Logger
 
@@ -272,10 +262,6 @@ func NewServer(p DNSCreateParams) (s *Server, err error) {
 		localDomainSuffix: strings.ToLower(localDomainSuffix),
 		etcHosts:          etcHosts,
 		anonymizer:        p.Anonymizer,
-		conf: ServerConfig{
-			ServePlainDNS: true,
-		},
-		tlsManager: p.TLSManager,
 	}
 
 	s.sysResolvers, err = sysresolv.NewSystemResolvers(nil, defaultPlainDNSPort)
@@ -359,7 +345,6 @@ func (s *Server) WriteDiskConfig(dc *configmgr.DNSConfig) {
 	dc.CacheEnabled = sc.CacheEnabled
 	dc.CacheOptimistic = sc.CacheOptimistic
 	dc.EnableDNSSEC = sc.EnableDNSSEC
-	dc.HandleDDR = sc.HandleDDR
 	dc.RefuseAny = sc.RefuseAny
 	dc.UsePrivateRDNS = s.conf.UsePrivateRDNS
 }
@@ -587,20 +572,10 @@ func (s *Server) prepareUpstreamSettings(ctx context.Context, boot upstream.Reso
 	}
 
 	uc, err := newUpstreamConfig(ctx, s.logger, upstreams, defaultDNSUpstream, &upstream.Options{
-		Logger:       aghslog.NewForUpstream(s.baseLogger, aghslog.UpstreamTypeMain),
-		Bootstrap:    boot,
-		Timeout:      s.conf.UpstreamTimeout,
-		HTTPVersions: aghnet.UpstreamHTTPVersions(s.conf.UseHTTP3Upstreams),
-		PreferIPv6:   s.conf.BootstrapPreferIPv6,
-		// Use a customized set of RootCAs, because Go's default mechanism of
-		// loading TLS roots does not always work properly on some routers so
-		// we're loading roots manually and pass it here.
-		//
-		// See [aghtls.SystemRootCAs].
-		//
-		// TODO(a.garipov): Investigate if that's true.
-		RootCAs:      s.tlsManager.RootCAs(),
-		CipherSuites: s.conf.TLSCiphers,
+		Logger:     aghslog.NewForUpstream(s.baseLogger, aghslog.UpstreamTypeMain),
+		Bootstrap:  boot,
+		Timeout:    s.conf.UpstreamTimeout,
+		PreferIPv6: s.conf.BootstrapPreferIPv6,
 	})
 	if err != nil {
 		return fmt.Errorf("preparing upstream config: %w", err)
@@ -612,7 +587,6 @@ func (s *Server) prepareUpstreamSettings(ctx context.Context, boot upstream.Reso
 		UpstreamTimeout:         s.conf.UpstreamTimeout,
 		BootstrapPreferIPv6:     s.conf.BootstrapPreferIPv6,
 		EDNSClientSubnetEnabled: s.conf.EDNSClientSubnet.Enabled,
-		UseHTTP3Upstreams:       s.conf.UseHTTP3Upstreams,
 	})
 
 	return nil
@@ -687,9 +661,8 @@ func (s *Server) prepareInternalDNS(ctx context.Context) (err error) {
 	}
 
 	bootOpts := &upstream.Options{
-		Logger:       aghslog.NewForUpstream(s.baseLogger, aghslog.UpstreamTypeBootstrap),
-		Timeout:      DefaultTimeout,
-		HTTPVersions: aghnet.UpstreamHTTPVersions(s.conf.UseHTTP3Upstreams),
+		Logger:  aghslog.NewForUpstream(s.baseLogger, aghslog.UpstreamTypeBootstrap),
+		Timeout: DefaultTimeout,
 	}
 
 	s.bootstrap, s.bootResolvers, err = newBootstrap(s.conf.BootstrapDNS, s.etcHosts, bootOpts)
@@ -921,19 +894,6 @@ func (s *Server) Reconfigure(ctx context.Context, conf *ServerConfig) error {
 	}
 
 	return nil
-}
-
-// ServeHTTP is a HTTP handler method we use to provide DNS-over-HTTPS.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !s.IsRunning() {
-		http.Error(w, "DNS server is not running", http.StatusInternalServerError)
-
-		return
-	}
-
-	if prx := s.proxy(); prx != nil {
-		prx.ServeHTTP(w, r)
-	}
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

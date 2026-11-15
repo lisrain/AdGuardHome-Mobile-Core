@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/osutil"
@@ -23,8 +22,7 @@ type signalHandler struct {
 	// logger is used to log the operation of the signal handler.
 	logger *slog.Logger
 
-	// mu protects clientStorage, hostsContainer, hcWatcher, tlsManager, and
-	// web.
+	// mu protects clientStorage, hostsContainer, hcWatcher, and web.
 	mu *sync.Mutex
 
 	// clientStorage is used to reload information about runtime clients with an
@@ -37,9 +35,6 @@ type signalHandler struct {
 	// hcWatcher is the watcher of [signalHandler.hostsContainer] to be shut
 	// down, if any.
 	hcWatcher service.Interface
-
-	// tlsManager is used to reload the TLS configuration.
-	tlsManager aghtls.Manager
 
 	// web is the web API server.
 	web service.Shutdowner
@@ -81,14 +76,6 @@ func (h *signalHandler) addClientStorage(s *client.Storage) {
 	defer h.mu.Unlock()
 
 	h.clientStorage = s
-}
-
-// addTLSManager stores the TLS manager.
-func (h *signalHandler) addTLSManager(m aghtls.Manager) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.tlsManager = m
 }
 
 // addWeb stores the web API server.
@@ -135,13 +122,6 @@ func (h *signalHandler) shutdown(ctx context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if h.tlsManager != nil {
-		err := h.tlsManager.Shutdown(ctx)
-		if err != nil {
-			h.logger.ErrorContext(ctx, "shutting down tls manager", slogutil.KeyError, err)
-		}
-	}
-
 	if h.web != nil {
 		err := h.web.Shutdown(ctx)
 		if err != nil {
@@ -169,13 +149,6 @@ func (h *signalHandler) reloadConfig(ctx context.Context) {
 
 	if h.clientStorage != nil {
 		h.clientStorage.ReloadARP(ctx)
-	}
-
-	if h.tlsManager != nil {
-		err := h.tlsManager.Refresh(ctx)
-		if err != nil {
-			h.logger.ErrorContext(ctx, "refreshing tls manager", slogutil.KeyError, err)
-		}
 	}
 }
 

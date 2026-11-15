@@ -33,13 +33,11 @@ func TestServer_ServeDNS(t *testing.T) {
 	forwardConf := ServerConfig{
 		UDPListenAddrs: []*net.UDPAddr{{}},
 		TCPListenAddrs: []*net.TCPAddr{{}},
-		TLSConf:        &TLSConfig{},
 		UpstreamMode:   proxy.UpstreamModeLoadBalance,
 		EDNSClientSubnet: &EDNSClientSubnet{
 			Enabled: false,
 		},
 		ClientsContainer: EmptyClientsContainer{},
-		ServePlainDNS:    true,
 	}
 	filters := []filtering.Filter{{
 		ID: 0, Data: []byte(rules),
@@ -49,7 +47,6 @@ func TestServer_ServeDNS(t *testing.T) {
 		Logger:               testLogger,
 		ProtectionEnabled:    true,
 		ApplyClientFiltering: applyEmptyClientFiltering,
-		BlockedServices:      emptyFilteringBlockedServices(),
 		BlockingMode:         filtering.BlockingModeDefault,
 	}, filters)
 	require.NoError(t, err)
@@ -64,7 +61,6 @@ func TestServer_ServeDNS(t *testing.T) {
 		DNSFilter:   f,
 		PrivateNets: netutil.SubnetSetFunc(netutil.IsLocallyServed),
 		Logger:      testLogger,
-		TLSManager:  testTLSManager,
 	})
 	require.NoError(t, err)
 
@@ -249,7 +245,6 @@ func TestServer_ServeDNS_restrictLocal(t *testing.T) {
 		ServerConfig{
 			UDPListenAddrs: []*net.UDPAddr{{}},
 			TCPListenAddrs: []*net.TCPAddr{{}},
-			TLSConf:        &TLSConfig{},
 			// TODO(s.chzhen):  Add tests where EDNSClientSubnet.Enabled is true.
 			// Improve Config declaration for tests.
 			UpstreamDNS:       []string{localUpsAddr},
@@ -258,9 +253,7 @@ func TestServer_ServeDNS_restrictLocal(t *testing.T) {
 			ClientsContainer:  EmptyClientsContainer{},
 			UsePrivateRDNS:    true,
 			LocalPTRResolvers: []string{localUpsAddr},
-			ServePlainDNS:     true,
 		},
-		testTLSManager,
 	)
 	startDeferStop(t, s)
 

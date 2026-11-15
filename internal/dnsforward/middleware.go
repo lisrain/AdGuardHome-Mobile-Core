@@ -2,7 +2,6 @@ package dnsforward
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -25,16 +24,9 @@ func (s *Server) Wrap(h proxy.Handler) (wrapped proxy.Handler) {
 	f := func(ctx context.Context, p *proxy.Proxy, pctx *proxy.DNSContext) (err error) {
 		l := slogutil.MustLoggerFromContext(ctx)
 
-		clientID, err := s.clientIDFromDNSContext(ctx, l, pctx)
-		if err != nil {
-			s.logger.WarnContext(ctx, "resolving client id", slogutil.KeyError, err)
-
-			pctx.Res = s.NewMsgSERVFAIL(pctx.Req)
-
-			return nil
-		}
-
-		blocked, _ := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
+		// Encrypted DNS protocols are not supported, so there is no ClientID
+		// provided by the client.
+		blocked, _ := s.IsBlockedClient(pctx.Addr.Addr(), "")
 		if blocked {
 			return s.serveBlockedResponse(pctx)
 		}
@@ -42,10 +34,6 @@ func (s *Server) Wrap(h proxy.Handler) (wrapped proxy.Handler) {
 		blocked = s.isBlockedHost(ctx, l, pctx.Req.Question)
 		if blocked {
 			return s.serveBlockedResponse(pctx)
-		}
-
-		if clientID != "" {
-			ctx = contextWithClientID(ctx, clientID)
 		}
 
 		return h.ServeDNS(ctx, p, pctx)
@@ -90,51 +78,6 @@ func (s *Server) isBlockedHost(
 	}
 
 	return false
-}
-
-// clientIDFromDNSContext extracts the client's ID from the server name of the
-// client's DoT or DoQ request or the path of the client's DoH.  If the protocol
-// is not one of these, clientID is an empty string and err is nil.  l and pctx
-// must not be nil.
-func (s *Server) clientIDFromDNSContext(
-	ctx context.Context,
-	l *slog.Logger,
-	pctx *proxy.DNSContext,
-) (clientID string, err error) {
-	proto := pctx.Proto
-	if proto == proxy.ProtoHTTPS {
-		clientID, err = clientIDFromDNSContextHTTPS(pctx)
-		if err != nil {
-			return "", fmt.Errorf("checking url: %w", err)
-		} else if clientID != "" {
-			return clientID, nil
-		}
-
-		// Go on and check the domain name as well.
-	} else if proto != proxy.ProtoTLS && proto != proxy.ProtoQUIC {
-		return "", nil
-	}
-
-	hostSrvName := s.conf.TLSConf.ServerName
-	if hostSrvName == "" {
-		return "", nil
-	}
-
-	cliSrvName, err := clientServerName(ctx, l, pctx, proto)
-	if err != nil {
-		return "", fmt.Errorf("getting client server-name: %w", err)
-	}
-
-	clientID, err = clientIDFromClientServerName(
-		hostSrvName,
-		cliSrvName,
-		s.conf.TLSConf.StrictSNICheck,
-	)
-	if err != nil {
-		return "", fmt.Errorf("clientid check: %w", err)
-	}
-
-	return clientID, nil
 }
 
 // logMiddleware adds a logger using [slogutil.ContextWithLogger] and logs the

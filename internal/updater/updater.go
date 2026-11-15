@@ -70,8 +70,18 @@ type Updater struct {
 	prevCheckResult VersionInfo
 }
 
+// defaultVersionURLEnv is the environment variable that overrides the update
+// index URL.  The mobile build points it at the repository's version.json.
+const defaultVersionURLEnv = "AGH_UPDATE_URL"
+
 // DefaultVersionURL returns the default URL for the version announcement.
 func DefaultVersionURL() *url.URL {
+	if s := os.Getenv(defaultVersionURLEnv); s != "" {
+		if u, err := url.Parse(s); err == nil && u.Host != "" {
+			return u
+		}
+	}
+
 	return &url.URL{
 		Scheme: urlutil.SchemeHTTPS,
 		Host:   "static.adtidy.org",

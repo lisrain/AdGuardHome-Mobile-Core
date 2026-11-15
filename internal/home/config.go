@@ -14,14 +14,11 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/agh"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghos"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/configmgr"
 	"github.com/AdguardTeam/AdGuardHome/internal/configmigrate"
-	"github.com/AdguardTeam/AdGuardHome/internal/dhcpd"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/rulelist"
-	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
@@ -110,9 +107,6 @@ type configuration struct {
 	// DNS is a block with DNS configuration params.
 	DNS configmgr.DNSConfig `yaml:"dns"`
 
-	// TLS is a block with TLS configuration params.
-	TLS tlsConfigSettings `yaml:"tls"`
-
 	// QueryLog is a block with query log configuration params.
 	QueryLog configmgr.QueryLogConfig `yaml:"querylog"`
 
@@ -125,7 +119,7 @@ type configuration struct {
 	//
 	// TODO(e.burkov):  Move all the filtering configuration fields into the
 	// only configuration subsection covering the changes with a single
-	// migration.  Also keep the blocked services in mind.
+	// migration.
 	Filters          []filtering.FilterYAML `yaml:"filters"`
 	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
 	UserRules        []string               `yaml:"user_rules"`
@@ -159,77 +153,6 @@ type configuration struct {
 	UnsafeUseCustomUpdateIndexURL bool `yaml:"unsafe_use_custom_update_index_url,omitempty"`
 }
 
-// tlsConfigSettings is the TLS configuration for DNS-over-TLS, DNS-over-QUIC,
-// and HTTPS.  When adding new properties, update the conversion functions
-// [confFromTLSSettings] and [confToTLSSettings] as necessary.
-type tlsConfigSettings struct {
-	// Status is the current status of the configuration.
-	Status tlsConfigStatus `yaml:"-" json:"-"`
-
-	// Enabled indicates whether encryption (DoT/DoH/HTTPS) is enabled.
-	Enabled bool `yaml:"enabled" json:"enabled"`
-
-	// ServerName is the hostname of the HTTPS/TLS server.
-	ServerName string `yaml:"server_name" json:"server_name,omitempty"`
-
-	// ForceHTTPS, if true, forces an HTTP to HTTPS redirect.
-	ForceHTTPS bool `yaml:"force_https" json:"force_https"`
-
-	// PortHTTPS is the HTTPS port.  If 0, HTTPS will be disabled.
-	PortHTTPS uint16 `yaml:"port_https" json:"port_https,omitempty"`
-
-	// PortDNSOverTLS is the DNS-over-TLS port.  If 0, DoT will be disabled.
-	PortDNSOverTLS uint16 `yaml:"port_dns_over_tls" json:"port_dns_over_tls,omitempty"`
-
-	// PortDNSOverQUIC is the DNS-over-QUIC port.  If 0, DoQ will be disabled.
-	PortDNSOverQUIC uint16 `yaml:"port_dns_over_quic" json:"port_dns_over_quic,omitempty"`
-
-	// PortDNSCrypt is the port for DNSCrypt requests.  If it's zero, DNSCrypt
-	// is disabled.
-	PortDNSCrypt uint16 `yaml:"port_dnscrypt" json:"port_dnscrypt"`
-
-	// DNSCryptConfigFile is the path to the DNSCrypt config file.  Must be set
-	// if PortDNSCrypt is not zero.
-	//
-	// See https://github.com/AdguardTeam/dnsproxy and
-	// https://github.com/AdguardTeam/dnscrypt.
-	DNSCryptConfigFile string `yaml:"dnscrypt_config_file" json:"dnscrypt_config_file"`
-
-	// CertificateChain is the PEM-encoded certificate chain.  Must be empty if
-	// [tlsConfigSettings.CertificatePath] is provided.
-	CertificateChain string `yaml:"certificate_chain" json:"certificate_chain"`
-
-	// PrivateKey is the PEM-encoded private key.  Must be empty if
-	// [tlsConfigSettings.PrivateKeyPath] is provided.
-	PrivateKey string `yaml:"private_key" json:"private_key"`
-
-	// CertificatePath is the path to the certificate file.  Must be empty if
-	// [tlsConfigSettings.CertificateChain] is provided.
-	CertificatePath string `yaml:"certificate_path" json:"certificate_path"`
-
-	// PrivateKeyPath is the path to the private key file.  Must be empty if
-	// [tlsConfigSettings.PrivateKey] is provided.
-	PrivateKeyPath string `yaml:"private_key_path" json:"private_key_path"`
-
-	// OverrideTLSCiphers, when set, contains the names of the cipher suites to
-	// use.  If the slice is empty, the default safe suites are used.
-	OverrideTLSCiphers []string `yaml:"override_tls_ciphers,omitempty" json:"-"`
-
-	// CertificateChainData is the PEM-encoded byte data for the certificate
-	// chain.
-	CertificateChainData []byte `yaml:"-" json:"-"`
-
-	// PrivateKeyData is the PEM-encoded byte data for the private key.
-	PrivateKeyData []byte `yaml:"-" json:"-"`
-
-	// StrictSNICheck controls if the connections with SNI mismatching the
-	// certificate's ones should be rejected.
-	StrictSNICheck bool `yaml:"strict_sni_check" json:"-"`
-
-	// ServePlainDNS defines whether to serve a plain DNS.
-	ServePlainDNS bool `yaml:"-" json:"-"`
-}
-
 // Default block host constants.
 const (
 	defaultSafeBrowsingBlockHost = "standard-block.dns.adguard.com"
@@ -239,6 +162,16 @@ const (
 // defaultLocalDomainName is the default domain name used for DHCP hosts.
 const defaultLocalDomainName = "lan"
 
+const (
+	// defaultDHCPLeaseTTL is the default time-to-live for DHCP leases, in
+	// seconds.
+	defaultDHCPLeaseTTL = uint32(24 * 60 * 60)
+
+	// defaultDHCPTimeoutICMP is the default timeout for waiting for ICMP
+	// responses during DHCP address checks, in milliseconds.
+	defaultDHCPTimeoutICMP = uint32(1000)
+)
+
 // config is the global configuration structure.
 //
 // TODO(a.garipov, e.burkov): This global is awful and must be removed.
@@ -246,15 +179,6 @@ var config = &configuration{
 	AuthAttempts: 5,
 	AuthBlockMin: 15,
 	HTTPConfig: configmgr.HTTPConfig{
-		DoH: &configmgr.DoHConfig{
-			Routes: []string{
-				"GET /dns-query",
-				"POST /dns-query",
-				"GET /dns-query/{ClientID}",
-				"POST /dns-query/{ClientID}",
-			},
-			InsecureEnabled: false,
-		},
 		Pprof: &configmgr.HTTPPprofConfig{
 			Port:    6060,
 			Enabled: false,
@@ -294,16 +218,9 @@ var config = &configuration{
 		Port:                   defaultPortDNS,
 		CacheEnabled:           true,
 		EnableDNSSEC:           true,
-		HandleDDR:              true,
 		HostsFileEnabled:       true,
 		RefuseAny:              true,
-		ServePlainDNS:          true,
 		UsePrivateRDNS:         true,
-	},
-	TLS: tlsConfigSettings{
-		PortHTTPS:       defaultPortHTTPS,
-		PortDNSOverTLS:  defaultPortTLS, // needs to be passed through to dnsproxy
-		PortDNSOverQUIC: defaultPortQUIC,
 	},
 	QueryLog: configmgr.QueryLogConfig{
 		DirPath:        "",
@@ -352,36 +269,19 @@ var config = &configuration{
 
 		MaxHTTPSize:           rulelist.DefaultMaxRuleListSize,
 		SafeBrowsingCacheSize: 1 * 1024 * 1024,
-		SafeSearchCacheSize:   1 * 1024 * 1024,
 		ParentalCacheSize:     1 * 1024 * 1024,
 		CacheTime:             30,
-
-		SafeSearchConf: filtering.SafeSearchConfig{
-			Enabled:    false,
-			Bing:       true,
-			DuckDuckGo: true,
-			Ecosia:     true,
-			Google:     true,
-			Pixabay:    true,
-			Yandex:     true,
-			YouTube:    true,
-		},
-
-		BlockedServices: &filtering.BlockedServices{
-			Schedule: schedule.EmptyWeekly(),
-			IDs:      []string{},
-		},
 
 		ParentalBlockHost:     defaultParentalBlockHost,
 		SafeBrowsingBlockHost: defaultSafeBrowsingBlockHost,
 	},
 	DHCP: &configmgr.DHCPConfig{
 		Conf4: &configmgr.DHCPv4Config{
-			ICMPTimeout:   dhcpd.DefaultDHCPTimeoutICMP,
-			LeaseDuration: dhcpd.DefaultDHCPLeaseTTL,
+			ICMPTimeout:   defaultDHCPTimeoutICMP,
+			LeaseDuration: defaultDHCPLeaseTTL,
 		},
 		Conf6: &configmgr.DHCPv6Config{
-			LeaseDuration: dhcpd.DefaultDHCPLeaseTTL,
+			LeaseDuration: defaultDHCPLeaseTTL,
 		},
 		InterfaceName:   "",
 		LocalDomainName: defaultLocalDomainName,
@@ -512,8 +412,7 @@ func parseConfig(
 		config.DNS.UpstreamTimeout = timeutil.Duration(dnsforward.DefaultTimeout)
 	}
 
-	// Do not wrap the error because it's informative enough as is.
-	return validateTLSCipherIDs(config.TLS.OverrideTLSCiphers)
+	return nil
 }
 
 // logIPHint logs an informational message when the config contains an unquoted
@@ -593,10 +492,6 @@ func validateConfig(ctx context.Context, l *slog.Logger, fileData []byte) (err e
 		return fmt.Errorf("validating http config: %w", err)
 	}
 
-	if config.TLS.Enabled && config.TLS.PortHTTPS != 0 && len(config.HTTPConfig.DoH.Routes) == 0 {
-		l.WarnContext(ctx, "no dns-over-https routes configured; dns-over-https is not served")
-	}
-
 	if len(config.Users) == 0 {
 		l.WarnContext(ctx, "no users in the configuration file; authentication is disabled")
 	}
@@ -626,21 +521,6 @@ func validateConfigPorts(conf *configuration) (err error) {
 
 	udpPorts := aghalg.UniqChecker[udpPort]{}
 	addPorts(udpPorts, udpPort(conf.DNS.Port))
-
-	if conf.TLS.Enabled {
-		addPorts(
-			tcpPorts,
-			tcpPort(conf.TLS.PortHTTPS),
-			tcpPort(conf.TLS.PortDNSOverTLS),
-			tcpPort(conf.TLS.PortDNSCrypt),
-		)
-
-		addPorts(udpPorts, udpPort(conf.TLS.PortDNSOverQUIC), udpPort(conf.TLS.PortDNSCrypt))
-
-		if conf.DNS.ServeHTTP3 {
-			addPorts(udpPorts, udpPort(conf.TLS.PortHTTPS))
-		}
-	}
 
 	var errs []error
 	if err = tcpPorts.Validate(); err != nil {
@@ -692,7 +572,6 @@ func readConfigFile(
 func (c *configuration) write(
 	ctx context.Context,
 	l *slog.Logger,
-	extTLSConf *aghtls.ExtendedTLSConfig,
 	auth *auth,
 	workDir string,
 	confPath string,
@@ -702,10 +581,6 @@ func (c *configuration) write(
 
 	if auth != nil {
 		config.Users = auth.usersList(ctx)
-	}
-
-	if extTLSConf != nil {
-		config.TLS = confToTLSSettings(extTLSConf)
 	}
 
 	if globalContext.stats != nil {
@@ -731,10 +606,6 @@ func (c *configuration) write(
 		config.Clients.Sources.WHOIS = addrProcConf.UseWHOIS
 	}
 
-	if globalContext.dhcpServer != nil {
-		globalContext.dhcpServer.WriteDiskConfig(config.DHCP)
-	}
-
 	config.Clients.Persistent = globalContext.clients.forConfig()
 
 	confPath = configFilePath(ctx, l, workDir, confPath)
@@ -757,26 +628,11 @@ func (c *configuration) write(
 	return nil
 }
 
-// validateTLSCipherIDs validates the custom TLS cipher suite IDs.
-func validateTLSCipherIDs(cipherIDs []string) (err error) {
-	if len(cipherIDs) == 0 {
-		return nil
-	}
-
-	_, err = aghtls.ParseCiphers(cipherIDs)
-	if err != nil {
-		return fmt.Errorf("override_tls_ciphers: %w", err)
-	}
-
-	return nil
-}
-
 // defaultConfigModifier is a default [agh.ConfigModifier] implementation.
 type defaultConfigModifier struct {
 	auth     *auth
 	config   *configuration
 	logger   *slog.Logger
-	tlsMgr   aghtls.Manager
 	workDir  string
 	confPath string
 }
@@ -805,12 +661,7 @@ var _ agh.ConfigModifier = (*defaultConfigModifier)(nil)
 // Apply implements the [agh.ConfigModifier] interface for
 // *defaultConfigModifier.
 func (cm *defaultConfigModifier) Apply(ctx context.Context) {
-	var extTLSConf *aghtls.ExtendedTLSConfig
-	if cm.tlsMgr != nil {
-		extTLSConf = cm.tlsMgr.ExtendedTLSConfig()
-	}
-
-	err := cm.config.write(ctx, cm.logger, extTLSConf, cm.auth, cm.workDir, cm.confPath)
+	err := cm.config.write(ctx, cm.logger, cm.auth, cm.workDir, cm.confPath)
 	if err != nil {
 		cm.logger.ErrorContext(ctx, "writing config", slogutil.KeyError, err)
 	}
@@ -819,9 +670,4 @@ func (cm *defaultConfigModifier) Apply(ctx context.Context) {
 // setAuth sets the auth parameters used by Apply.
 func (cm *defaultConfigModifier) setAuth(a *auth) {
 	cm.auth = a
-}
-
-// setTLSManager sets the TLS manager used by Apply.
-func (cm *defaultConfigModifier) setTLSManager(m aghtls.Manager) {
-	cm.tlsMgr = m
 }

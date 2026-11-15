@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"runtime"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghos"
 	"github.com/AdguardTeam/AdGuardHome/internal/configmgr"
@@ -16,9 +15,12 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// configSyslog is used to indicate that syslog or eventlog (win) should be used
-// for logger output.
+// configSyslog is used to indicate that syslog should be used for logger
+// output.
 const configSyslog = "syslog"
+
+// serviceName is the name used to identify AdGuard Home in syslog.
+const serviceName = "AdGuardHome"
 
 // logSettings are the logging settings part of the configuration file.
 type logSettings struct {
@@ -88,7 +90,6 @@ func configureLogger(ls *logSettings, workDir string) (err error) {
 	}
 
 	if ls.file == configSyslog {
-		// Use syslog where it is possible and eventlog on Windows.
 		err = aghos.ConfigureSyslog(serviceName)
 		if err != nil {
 			return fmt.Errorf("cannot initialize syslog: %w", err)
@@ -147,12 +148,6 @@ func newLogSettings(
 	}
 
 	ls.file = cmp.Or(opts.logFile, ls.file)
-
-	if opts.runningAsService && ls.file == "" && runtime.GOOS == "windows" {
-		// When running as a Windows service, use eventlog by default if
-		// nothing else is configured.  Otherwise, we'll lose the log output.
-		ls.file = configSyslog
-	}
 
 	return ls
 }

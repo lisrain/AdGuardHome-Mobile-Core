@@ -1,7 +1,6 @@
 package dnsforward
 
 import (
-	"crypto/tls"
 	"net"
 	"testing"
 	"time"
@@ -22,124 +21,6 @@ const (
 
 	dnsClientTimeout = 200 * time.Millisecond
 )
-
-func TestServer_middlewareTLS(t *testing.T) {
-	t.Parallel()
-
-	const clientID = "client-1"
-
-	testCases := []struct {
-		clientSrvName     string
-		name              string
-		host              string
-		allowedClients    []string
-		disallowedClients []string
-		blockedHosts      []string
-		wantRCode         int
-	}{{
-		clientSrvName:     tlsServerName,
-		name:              "allow_all",
-		host:              testFQDN,
-		allowedClients:    []string{},
-		disallowedClients: []string{},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeSuccess,
-	}, {
-		clientSrvName:     "%" + "." + tlsServerName,
-		name:              "invalid_client_id",
-		host:              testFQDN,
-		allowedClients:    []string{},
-		disallowedClients: []string{},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeServerFailure,
-	}, {
-		clientSrvName:     clientID + "." + tlsServerName,
-		name:              "allowed_client_allowed",
-		host:              testFQDN,
-		allowedClients:    []string{clientID},
-		disallowedClients: []string{},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeSuccess,
-	}, {
-		clientSrvName:     "client-2." + tlsServerName,
-		name:              "allowed_client_rejected",
-		host:              testFQDN,
-		allowedClients:    []string{clientID},
-		disallowedClients: []string{},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeRefused,
-	}, {
-		clientSrvName:     tlsServerName,
-		name:              "disallowed_client_allowed",
-		host:              testFQDN,
-		allowedClients:    []string{},
-		disallowedClients: []string{clientID},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeSuccess,
-	}, {
-		clientSrvName:     clientID + "." + tlsServerName,
-		name:              "disallowed_client_rejected",
-		host:              testFQDN,
-		allowedClients:    []string{},
-		disallowedClients: []string{clientID},
-		blockedHosts:      []string{},
-		wantRCode:         dns.RcodeRefused,
-	}, {
-		clientSrvName:     tlsServerName,
-		name:              "blocked_hosts_allowed",
-		host:              testFQDN,
-		allowedClients:    []string{},
-		disallowedClients: []string{},
-		blockedHosts:      []string{blockedHost},
-		wantRCode:         dns.RcodeSuccess,
-	}, {
-		clientSrvName:     tlsServerName,
-		name:              "blocked_hosts_rejected",
-		host:              dns.Fqdn(blockedHost),
-		allowedClients:    []string{},
-		disallowedClients: []string{},
-		blockedHosts:      []string{blockedHost},
-		wantRCode:         dns.RcodeRefused,
-	}}
-
-	localAns := newTestDNSAnswer(testFQDN, net.IP{1, 2, 3, 4})
-	localUpsAddr := newTestUpstream(t, localAns)
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			s, _ := createTestTLS(t, &TLSConfig{
-				TLSListenAddrs: []*net.TCPAddr{{}},
-				ServerName:     tlsServerName,
-			})
-
-			s.conf.UpstreamDNS = []string{localUpsAddr}
-			s.conf.AllowedClients = tc.allowedClients
-			s.conf.DisallowedClients = tc.disallowedClients
-			s.conf.BlockedHosts = tc.blockedHosts
-
-			err := s.Prepare(testutil.ContextWithTimeout(t, testTimeout), &s.conf)
-			require.NoError(t, err)
-
-			startDeferStop(t, s)
-
-			client := newTestTCPClient(tc.clientSrvName)
-
-			req := createTestMessage(tc.host)
-			addr := s.dnsProxy.Addr(proxy.ProtoTLS).String()
-
-			reply, _, err := client.Exchange(req, addr)
-			require.NoError(t, err)
-
-			if tc.wantRCode == dns.RcodeSuccess {
-				assertSuccessResponse(t, reply, localAns)
-			} else {
-				assertRejectedResponse(t, reply, tc.wantRCode)
-			}
-		})
-	}
-}
 
 func TestServer_middlewareUDP(t *testing.T) {
 	t.Parallel()
@@ -224,7 +105,6 @@ func TestServer_middlewareUDP(t *testing.T) {
 				ServerConfig{
 					UDPListenAddrs:    []*net.UDPAddr{{}},
 					TCPListenAddrs:    []*net.TCPAddr{{}},
-					TLSConf:           &TLSConfig{},
 					AllowedClients:    tc.allowedClients,
 					DisallowedClients: tc.disallowedClients,
 					BlockedHosts:      tc.blockedHosts,
@@ -232,9 +112,7 @@ func TestServer_middlewareUDP(t *testing.T) {
 					UpstreamMode:      proxy.UpstreamModeLoadBalance,
 					EDNSClientSubnet:  &EDNSClientSubnet{Enabled: false},
 					ClientsContainer:  EmptyClientsContainer{},
-					ServePlainDNS:     true,
 				},
-				testTLSManager,
 			)
 
 			startDeferStop(t, s)
@@ -287,20 +165,6 @@ func newTestUpstream(tb testing.TB, answer []dns.RR) (addr string) {
 	})
 
 	return aghtest.StartLocalhostUpstream(tb, handler).String()
-}
-
-// newTestTCPClient creates a new TCP client for testing.
-func newTestTCPClient(clientSrvName string) (c *dns.Client) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         clientSrvName,
-	}
-
-	return &dns.Client{
-		Net:       "tcp-tls",
-		TLSConfig: tlsConfig,
-		Timeout:   dnsClientTimeout,
-	}
 }
 
 // assertSuccessResponse checks that the response is successful with expected

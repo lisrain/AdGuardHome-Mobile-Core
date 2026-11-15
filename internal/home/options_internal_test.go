@@ -106,12 +106,6 @@ func TestParsePerformUpdate(t *testing.T) {
 	assert.True(t, testParseOK(t, "--update").performUpdate, "--update is perform update")
 }
 
-func TestParseService(t *testing.T) {
-	assert.Equal(t, "", testParseOK(t).serviceControlAction, "empty is not service cmd")
-	assert.Equal(t, "cmd", testParseOK(t, "-s", "cmd").serviceControlAction, "-s is service cmd")
-	assert.Equal(t, "cmd", testParseOK(t, "--service", "cmd").serviceControlAction, "--service is service cmd")
-}
-
 func TestParseGLInet(t *testing.T) {
 	assert.False(t, testParseOK(t).glinetMode, "empty is not GL-Inet mode")
 	assert.True(t, testParseOK(t, "--glinet").glinetMode, "--glinet is GL-Inet mode")
@@ -124,75 +118,4 @@ func TestParseUnknown(t *testing.T) {
 	testParseErr(t, "unknown triple", "---x")
 	testParseErr(t, "unknown plus", "+x")
 	testParseErr(t, "unknown dash", "-")
-}
-
-func TestOptsToArgs(t *testing.T) {
-	testCases := []struct {
-		name string
-		args []string
-		opts options
-	}{{
-		name: "empty",
-		args: []string{},
-		opts: options{},
-	}, {
-		name: "config_filename",
-		args: []string{"-c", "path"},
-		opts: options{confFilename: "path"},
-	}, {
-		name: "work_dir",
-		args: []string{"-w", "path"},
-		opts: options{workDir: "path"},
-	}, {
-		name: "web-addr",
-		args: []string{"--web-addr", "1.2.3.4:8080"},
-		opts: options{bindAddr: netip.MustParseAddrPort("1.2.3.4:8080")},
-	}, {
-		name: "log_file",
-		args: []string{"-l", "path"},
-		opts: options{logFile: "path"},
-	}, {
-		name: "pid_file",
-		args: []string{"--pidfile", "path"},
-		opts: options{pidFile: "path"},
-	}, {
-		name: "disable_update",
-		args: []string{"--no-check-update"},
-		opts: options{disableUpdate: true},
-	}, {
-		name: "perform_update",
-		args: []string{"--update"},
-		opts: options{performUpdate: true},
-	}, {
-		name: "control_action",
-		args: []string{"-s", "run"},
-		opts: options{serviceControlAction: "run"},
-	}, {
-		name: "glinet_mode",
-		args: []string{"--glinet"},
-		opts: options{glinetMode: true},
-	}, {
-		name: "multiple",
-		args: []string{
-			"-c", "config",
-			"-w", "work",
-			"-s", "run",
-			"--pidfile", "pid",
-			"--no-check-update",
-		},
-		opts: options{
-			serviceControlAction: "run",
-			confFilename:         "config",
-			workDir:              "work",
-			pidFile:              "pid",
-			disableUpdate:        true,
-		},
-	}}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := optsToArgs(tc.opts)
-			assert.ElementsMatch(t, tc.args, result)
-		})
-	}
 }

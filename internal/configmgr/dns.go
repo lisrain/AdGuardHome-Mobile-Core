@@ -156,9 +156,6 @@ type DNSConfig struct {
 	// upstream requests.
 	EnableDNSSEC bool `yaml:"enable_dnssec"`
 
-	// HandleDDR, if true, handle DDR requests
-	HandleDDR bool `yaml:"handle_ddr"`
-
 	// HostsFileEnabled defines whether to use information from the system hosts
 	// file to resolve queries.
 	HostsFileEnabled bool `yaml:"hostsfile_enabled"`
@@ -166,27 +163,11 @@ type DNSConfig struct {
 	// RefuseAny, if true, refuse ANY requests.
 	RefuseAny bool `yaml:"refuse_any"`
 
-	// ServeHTTP3 defines if HTTP/3 is allowed for incoming requests.
-	//
-	// TODO(a.garipov): Add to the UI when HTTP/3 support is no longer
-	// experimental.
-	ServeHTTP3 bool `yaml:"serve_http3"`
-
-	// ServePlainDNS defines if plain DNS is allowed for incoming requests.
-	ServePlainDNS bool `yaml:"serve_plain_dns"`
-
 	// UseDNS64 defines if DNS64 should be used for incoming requests.  Requests
 	// of type PTR for addresses within the configured prefixes will be resolved
 	// via [PrivateRDNSResolvers], so those should be valid and UsePrivateRDNS
 	// be set to true.
 	UseDNS64 bool `yaml:"use_dns64"`
-
-	// UseHTTP3Upstreams defines if HTTP/3 is allowed for DNS-over-HTTPS
-	// upstreams.
-	//
-	// TODO(a.garipov): Add to the UI when HTTP/3 support is no longer
-	// experimental.
-	UseHTTP3Upstreams bool `yaml:"use_http3_upstreams"`
 
 	// UsePrivateRDNS enables resolving requests containing a private IP address
 	// using private reverse DNS resolvers.  See PrivateRDNSResolvers.

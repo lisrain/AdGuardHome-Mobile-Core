@@ -23,7 +23,6 @@ type CommonUpstreamConfig struct {
 	UpstreamTimeout         time.Duration
 	BootstrapPreferIPv6     bool
 	EDNSClientSubnetEnabled bool
-	UseHTTP3Upstreams       bool
 }
 
 // customUpstreamConfig contains custom client upstream configuration and the
@@ -219,11 +218,10 @@ func newCustomUpstreamConfig(
 	upsConf, err := proxy.ParseUpstreamsConfig(
 		upstreams,
 		&upstream.Options{
-			Logger:       cliLogger,
-			Bootstrap:    conf.Bootstrap,
-			Timeout:      conf.UpstreamTimeout,
-			HTTPVersions: aghnet.UpstreamHTTPVersions(conf.UseHTTP3Upstreams),
-			PreferIPv6:   conf.BootstrapPreferIPv6,
+			Logger:     cliLogger,
+			Bootstrap:  conf.Bootstrap,
+			Timeout:    conf.UpstreamTimeout,
+			PreferIPv6: conf.BootstrapPreferIPv6,
 		},
 	)
 	if err != nil {

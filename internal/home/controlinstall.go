@@ -10,7 +10,6 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 	"unicode/utf8"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/osutil/executil"
-	"github.com/quic-go/quic-go/http3"
 )
 
 // getAddrsResponse is the response for /install/get_addresses endpoint.
@@ -279,10 +277,6 @@ func checkDNSStubListener(
 	l *slog.Logger,
 	cmdCons executil.CommandConstructor,
 ) (ok bool) {
-	if runtime.GOOS != "linux" {
-		return false
-	}
-
 	cmds := container.KeyValues[string, []string]{{
 		Key:   "systemctl",
 		Value: []string{"is-enabled", "systemd-resolved"},
@@ -412,29 +406,6 @@ func shutdownSrv(ctx context.Context, l *slog.Logger, srv *http.Server) {
 	l.Log(ctx, lvl, "shutting down http server", "addr", srv.Addr, slogutil.KeyError, err)
 }
 
-// shutdownSrv3 shuts down srv and logs the error, if any.  l must not be nil.
-//
-// TODO(a.garipov): Think of a good way to merge with [shutdownSrv].
-func shutdownSrv3(ctx context.Context, l *slog.Logger, srv *http3.Server) {
-	defer slogutil.RecoverAndLog(ctx, l)
-
-	if srv == nil {
-		return
-	}
-
-	err := srv.Close()
-	if err == nil {
-		return
-	}
-
-	lvl := slog.LevelDebug
-	if !errors.Is(err, context.Canceled) {
-		lvl = slog.LevelError
-	}
-
-	l.Log(ctx, lvl, "shutting down http/3 server", "addr", srv.Addr, slogutil.KeyError, err)
-}
-
 // PasswordMinRunes is the minimum length of user's password in runes.
 const PasswordMinRunes = 8
 
@@ -526,10 +497,8 @@ func (web *webAPI) finalizeInstall(
 		return
 	}
 
-	// TODO(e.burkov): StartMods() should be put in a separate goroutine at the
-	// moment we'll allow setting up TLS in the initial configuration or the
-	// configuration itself will use HTTPS protocol, because the underlying
-	// functions potentially restart the HTTPS server.
+	// TODO(e.burkov): StartMods() should be put in a separate goroutine,
+	// because the underlying functions potentially restart the HTTP server.
 	err = web.startMods(ctx)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusInternalServerError, "%s", err)
@@ -540,7 +509,6 @@ func (web *webAPI) finalizeInstall(
 	err = config.write(
 		ctx,
 		web.logger,
-		web.tlsManager.ExtendedTLSConfig(),
 		web.auth,
 		web.conf.workDir,
 		web.conf.confPath,
@@ -625,8 +593,7 @@ func decodeApplyConfigReq(r io.Reader) (req *applyConfigReq, restartHTTP bool, e
 	return req, restartHTTP, err
 }
 
-// startMods initializes the DNS and DoH servers and starts the DNS one after
-// installation.
+// startMods initializes the DNS server and starts it after installation.
 func (web *webAPI) startMods(ctx context.Context) (err error) {
 	statsDir, querylogDir, err := checkStatsAndQuerylogDirs(config, web.conf.workDir)
 	if err != nil {
@@ -637,7 +604,6 @@ func (web *webAPI) startMods(ctx context.Context) (err error) {
 	err = initDNS(
 		ctx,
 		web.baseLogger,
-		web.tlsManager,
 		web.confModifier,
 		web.httpReg,
 		statsDir,
@@ -648,16 +614,6 @@ func (web *webAPI) startMods(ctx context.Context) (err error) {
 		// Don't wrap the error, because it's informative enough as is.
 		return err
 	}
-
-	// The web server is already serving requests during the installation, so
-	// set the DoH server before starting the DNS one to avoid a window where
-	// DoH requests are answered by the authentication middleware.
-	doHSrv := newDoHServer(&doHServerConfig{
-		handler: globalContext.dnsServer,
-		logger:  web.baseLogger.With(slogutil.KeyPrefix, "doh_server"),
-		routes:  config.HTTPConfig.DoH.Routes,
-	})
-	web.setDoHServer(doHSrv)
 
 	err = startDNSServer(ctx)
 	if err != nil {

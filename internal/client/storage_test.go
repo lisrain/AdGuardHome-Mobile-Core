@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"net/netip"
-	"runtime"
 	"slices"
 	"sync"
 	"testing"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/arpdb"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
-	"github.com/AdguardTeam/AdGuardHome/internal/dhcpd"
 	"github.com/AdguardTeam/AdGuardHome/internal/dhcpsvc"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
@@ -573,65 +571,6 @@ func TestClientsAddExisting(t *testing.T) {
 		storage.UpdateAddress(ctx, ip, "test", nil)
 		rc := storage.ClientRuntime(ip)
 		assert.True(t, compareRuntimeInfo(rc, client.SourceRDNS, "test"))
-	})
-
-	t.Run("complicated", func(t *testing.T) {
-		// TODO(a.garipov): Properly decouple the DHCP server from the client
-		// storage.
-		if runtime.GOOS == "windows" {
-			t.Skip("skipping dhcp test on windows")
-		}
-
-		// First, init a DHCP server with a single static lease.
-		config := &dhcpd.ServerConfig{
-			Logger:  testLogger,
-			Enabled: true,
-			DataDir: t.TempDir(),
-			Conf4: dhcpd.V4ServerConf{
-				Enabled:    true,
-				GatewayIP:  netip.MustParseAddr("1.2.3.1"),
-				SubnetMask: netip.MustParseAddr("255.255.255.0"),
-				RangeStart: netip.MustParseAddr("1.2.3.2"),
-				RangeEnd:   netip.MustParseAddr("1.2.3.10"),
-			},
-		}
-
-		ctx = testutil.ContextWithTimeout(t, testTimeout)
-		dhcpServer, err := dhcpd.Create(ctx, config)
-		require.NoError(t, err)
-
-		storage, err := client.NewStorage(ctx, &client.StorageConfig{
-			BaseLogger: testLogger,
-			Logger:     testLogger,
-			DHCP:       dhcpServer,
-		})
-		require.NoError(t, err)
-
-		ip := netip.MustParseAddr("1.2.3.4")
-
-		err = dhcpServer.AddStaticLease(&dhcpsvc.Lease{
-			HWAddr:   net.HardwareAddr{0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA},
-			IP:       ip,
-			Hostname: "testhost",
-			Expiry:   time.Now().Add(time.Hour),
-		})
-		require.NoError(t, err)
-
-		// Add a new client with the same IP as for a client with MAC.
-		err = storage.Add(ctx, &client.Persistent{
-			Name: "client2",
-			UID:  client.NewUID(),
-			IPs:  []netip.Addr{ip},
-		})
-		require.NoError(t, err)
-
-		// Add a new client with the IP from the first client's IP range.
-		err = storage.Add(ctx, &client.Persistent{
-			Name: "client3",
-			UID:  client.NewUID(),
-			IPs:  []netip.Addr{netip.MustParseAddr("2.2.2.2")},
-		})
-		require.NoError(t, err)
 	})
 }
 

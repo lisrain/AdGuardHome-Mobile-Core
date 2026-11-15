@@ -4,7 +4,6 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/timeutil"
 	"github.com/AdguardTeam/golibs/validate"
@@ -19,16 +18,9 @@ type FilteringConfig struct {
 	// BlockingIPv6 is the IP address to be returned for a blocked AAAA request.
 	BlockingIPv6 netip.Addr `yaml:"blocking_ipv6"`
 
-	// BlockedServices is the configuration of blocked services.  Per-client
-	// settings can override this configuration.
-	BlockedServices *BlockedServices `yaml:"blocked_services"`
-
 	// ProtectionDisabledUntil is the timestamp until when the protection is
 	// disabled.
 	ProtectionDisabledUntil *time.Time `yaml:"protection_disabled_until"`
-
-	// SafeSearchConf is the safe search configuration.
-	SafeSearchConf *SafeSearch `yaml:"safe_search"`
 
 	// BlockingMode defines the way how blocked responses are constructed.
 	BlockingMode string `yaml:"blocking_mode"`
@@ -58,9 +50,6 @@ type FilteringConfig struct {
 	// SafeBrowsingCacheSize is the size of the safe browsing cache, in bytes.
 	SafeBrowsingCacheSize uint `yaml:"safebrowsing_cache_size"`
 
-	// SafeSearchCacheSize is the size of the safe search cache, in bytes.
-	SafeSearchCacheSize uint `yaml:"safesearch_cache_size"`
-
 	// CacheTime is the TTL of a cache element.
 	CacheTime timeutil.Duration `yaml:"cache_time"`
 
@@ -86,32 +75,6 @@ type FilteringConfig struct {
 
 	// SafeBrowsingEnabled indicates whether safe browsing is enabled.
 	SafeBrowsingEnabled bool `yaml:"safebrowsing_enabled"`
-}
-
-// BlockedServices is the configuration of blocked services.
-type BlockedServices struct {
-	// Schedule is blocked services schedule for every day of the week.
-	Schedule *schedule.Weekly `yaml:"schedule"`
-
-	// IDs is the names of blocked services.
-	IDs []string `yaml:"ids"`
-}
-
-// SafeSearch is a struct with safe search related settings.
-type SafeSearch struct {
-	// Enabled indicates if safe search is enabled entirely.
-	Enabled bool `yaml:"enabled"`
-
-	// Services flags.  Each flag indicates if the corresponding service is
-	// enabled or disabled.
-
-	Bing       bool `yaml:"bing"`
-	DuckDuckGo bool `yaml:"duckduckgo"`
-	Ecosia     bool `yaml:"ecosia"`
-	Google     bool `yaml:"google"`
-	Pixabay    bool `yaml:"pixabay"`
-	Yandex     bool `yaml:"yandex"`
-	YouTube    bool `yaml:"youtube"`
 }
 
 // LegacyRewrite is a single legacy DNS rewrite record.

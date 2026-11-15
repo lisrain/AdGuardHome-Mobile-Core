@@ -12,8 +12,6 @@ import (
 	"testing"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
-	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
-	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/golibs/testutil"
 	"github.com/stretchr/testify/assert"
@@ -49,9 +47,6 @@ func newPersistentClient(name string) (c *client.Persistent) {
 	return &client.Persistent{
 		Name: name,
 		UID:  client.NewUID(),
-		BlockedServices: &filtering.BlockedServices{
-			Schedule: schedule.EmptyWeekly(),
-		},
 	}
 }
 
@@ -108,10 +103,9 @@ func assertPersistentClients(tb testing.TB, clients *clientsContainer, want []*c
 	require.NoError(tb, err)
 
 	var got []*client.Persistent
-	ctx := testutil.ContextWithTimeout(tb, testTimeout)
 	for _, cj := range clientList.Clients {
 		var c *client.Persistent
-		c, err = clients.jsonToClient(ctx, *cj)
+		c, err = clients.jsonToClient(*cj)
 		require.NoError(tb, err)
 
 		got = append(got, c)
@@ -131,11 +125,10 @@ func assertPersistentClientsData(
 	tb.Helper()
 
 	var got []*client.Persistent
-	ctx := testutil.ContextWithTimeout(tb, testTimeout)
 	for _, cm := range data {
 		for _, cj := range cm {
 			var c *client.Persistent
-			c, err := clients.jsonToClient(ctx, *cj)
+			c, err := clients.jsonToClient(*cj)
 			require.NoError(tb, err)
 
 			got = append(got, c)

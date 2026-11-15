@@ -13,7 +13,6 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghtest"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/httphdr"
 	"github.com/AdguardTeam/golibs/testutil"
@@ -61,16 +60,9 @@ func TestWeb_HandleGetProfile(t *testing.T) {
 
 	t.Cleanup(func() { auth.close(testutil.ContextWithTimeout(t, testTimeout)) })
 
-	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	m, err := aghtls.NewDefaultManager(ctx, &aghtls.DefaultManagerConfig{
-		Logger: testLogger,
-	})
-	require.NoError(t, err)
-
 	web := newTestWeb(t, &webConfig{
-		tlsManager: m,
-		auth:       auth,
-		mux:        baseMux,
+		auth: auth,
+		mux:  baseMux,
 	})
 	require.NoError(t, err)
 
@@ -117,17 +109,10 @@ func TestWeb_HandlePutProfile(t *testing.T) {
 		OnApply: func(_ context.Context) { isConfigChanged = true },
 	}
 
-	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	m, err := aghtls.NewDefaultManager(ctx, &aghtls.DefaultManagerConfig{
-		Logger: testLogger,
-	})
-	require.NoError(t, err)
-
 	web := newTestWeb(t, &webConfig{
 		mux:            mux,
 		configModifier: confModifier,
 		httpReg:        httpReg,
-		tlsManager:     m,
 	})
 
 	mw.set(web)

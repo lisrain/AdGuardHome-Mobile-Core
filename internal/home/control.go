@@ -4,18 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
-	"net/url"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/version"
 	"github.com/AdguardTeam/golibs/httphdr"
 	"github.com/AdguardTeam/golibs/netutil"
-	"github.com/AdguardTeam/golibs/netutil/urlutil"
 	"github.com/NYTimes/gziphandler"
 )
 
@@ -68,8 +64,7 @@ func appendDNSAddrsWithIfaces(dst []string, src []netip.Addr) (res []string, err
 
 // collectDNSAddresses returns the list of DNS addresses the server is listening
 // on, including the addresses on all interfaces in cases of unspecified IPs.
-// extTLSConf must not be nil.
-func collectDNSAddresses(extTLSConf *aghtls.ExtendedTLSConfig) (addrs []string, err error) {
+func collectDNSAddresses() (addrs []string, err error) {
 	if hosts := config.DNS.BindHosts; len(hosts) == 0 {
 		addrs = appendDNSAddrs(addrs, netutil.IPv4Localhost())
 	} else {
@@ -77,20 +72,6 @@ func collectDNSAddresses(extTLSConf *aghtls.ExtendedTLSConfig) (addrs []string, 
 		if err != nil {
 			return nil, fmt.Errorf("collecting dns addresses: %w", err)
 		}
-	}
-
-	hasDoHRoutes := len(config.HTTPConfig.DoH.Routes) > 0
-	de := getDNSEncryption(extTLSConf, hasDoHRoutes)
-	if de.https != "" {
-		addrs = append(addrs, de.https)
-	}
-
-	if de.tls != "" {
-		addrs = append(addrs, de.tls)
-	}
-
-	if de.quic != "" {
-		addrs = append(addrs, de.quic)
 	}
 
 	return addrs, nil
@@ -122,9 +103,7 @@ func (web *webAPI) handleStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	l := web.logger
 
-	extTLSConfig := web.tlsManager.ExtendedTLSConfig()
-
-	dnsAddrs, err := collectDNSAddresses(extTLSConfig)
+	dnsAddrs, err := collectDNSAddresses()
 	if err != nil {
 		// Don't add a lot of formatting, since the error is already
 		// wrapped by collectDNSAddresses.
@@ -167,21 +146,12 @@ func (web *webAPI) handleStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// IsDHCPAvailable field is now false by default for Windows.
-	if runtime.GOOS != "windows" {
-		resp.IsDHCPAvailable = globalContext.dhcpServer != nil
-	}
-
 	aghhttp.WriteJSONResponseOK(ctx, l, w, r, resp)
 }
 
 // registerControlHandlers sets up HTTP handlers for various control endpoints.
 func (web *webAPI) registerControlHandlers() {
 	mux := web.conf.mux
-
-	web.httpReg.Register(http.MethodGet, "/control/tls/status", web.handleTLSStatus)
-	web.httpReg.Register(http.MethodPost, "/control/tls/configure", web.handleTLSConfigure)
-	web.httpReg.Register(http.MethodPost, "/control/tls/validate", web.handleTLSValidate)
 
 	mux.Handle(
 		"/control/version.json",
@@ -192,20 +162,6 @@ func (web *webAPI) registerControlHandlers() {
 	web.httpReg.Register(http.MethodGet, "/control/status", web.handleStatus)
 	web.httpReg.Register(http.MethodGet, "/control/profile", web.handleGetProfile)
 	web.httpReg.Register(http.MethodPut, "/control/profile/update", web.handlePutProfile)
-
-	mobileConfHandler := newMobileConfigHandler(&mobileConfigHandlerConfig{
-		logger: web.baseLogger,
-	})
-
-	// No authentication is required for DoH/DoT configuration endpoints.
-	mux.Handle(
-		"/apple/doh.mobileconfig",
-		web.postInstallHandler(http.HandlerFunc(mobileConfHandler.handleMobileConfigDoH)),
-	)
-	mux.Handle(
-		"/apple/dot.mobileconfig",
-		web.postInstallHandler(http.HandlerFunc(mobileConfHandler.handleMobileConfigDoT)),
-	)
 
 	web.registerAuthHandlers()
 }
@@ -345,97 +301,8 @@ func (web *webAPI) preInstallHandler(handler http.Handler) (wrapped http.Handler
 	})
 }
 
-// handleHTTPSRedirect redirects the request to HTTPS, if needed, and adds some
-// HTTPS-related headers.  If proceed is true, the middleware must continue
-// handling the request.
-func (web *webAPI) handleHTTPSRedirect(w http.ResponseWriter, r *http.Request) (proceed bool) {
-	if web.httpsServer.server == nil {
-		return true
-	}
-
-	ctx := r.Context()
-
-	host, err := netutil.SplitHost(r.Host)
-	if err != nil {
-		aghhttp.ErrorAndLog(ctx, web.logger, r, w, http.StatusBadRequest, "bad host: %s", err)
-
-		return false
-	}
-
-	var (
-		forceHTTPS bool
-		serveHTTP3 bool
-		portHTTPS  uint16
-	)
-	func() {
-		config.RLock()
-		defer config.RUnlock()
-
-		serveHTTP3, portHTTPS = config.DNS.ServeHTTP3, config.TLS.PortHTTPS
-		forceHTTPS = config.TLS.ForceHTTPS && config.TLS.Enabled && config.TLS.PortHTTPS != 0
-	}()
-
-	respHdr := w.Header()
-
-	// Let the browser know that server supports HTTP/3.
-	//
-	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Alt-Svc.
-	//
-	// TODO(a.garipov): Consider adding a configurable max-age.  Currently, the
-	// default is 24 hours.
-	if serveHTTP3 {
-		altSvc := fmt.Sprintf(`h3=":%d"`, portHTTPS)
-		respHdr.Set(httphdr.AltSvc, altSvc)
-	}
-
-	if forceHTTPS {
-		if r.TLS == nil {
-			u := httpsURL(r.URL, host, portHTTPS)
-			http.Redirect(w, r, u.String(), http.StatusTemporaryRedirect)
-
-			return false
-		}
-
-		// TODO(a.garipov): Consider adding a configurable max-age.  Currently,
-		// the default is 365 days.
-		respHdr.Set(httphdr.StrictTransportSecurity, aghhttp.HdrValStrictTransportSecurity)
-	}
-
-	// Allow the frontend from the HTTP origin to send requests to the HTTPS
-	// server.  This can happen when the user has just set up HTTPS with
-	// redirects.  Prevent cache-related errors by setting the Vary header.
-	//
-	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin.
-	originURL := &url.URL{
-		Scheme: urlutil.SchemeHTTP,
-		Host:   r.Host,
-	}
-
-	respHdr.Set(httphdr.AccessControlAllowOrigin, originURL.String())
-	respHdr.Set(httphdr.Vary, httphdr.Origin)
-
-	return true
-}
-
-// httpsURL returns a copy of u for redirection to the HTTPS version, taking the
-// hostname and the HTTPS port into account.
-func httpsURL(u *url.URL, host string, portHTTPS uint16) (redirectURL *url.URL) {
-	hostPort := host
-	if portHTTPS != defaultPortHTTPS {
-		hostPort = netutil.JoinHostPort(host, portHTTPS)
-	}
-
-	return &url.URL{
-		Scheme:   urlutil.SchemeHTTPS,
-		Host:     hostPort,
-		Path:     u.Path,
-		RawQuery: u.RawQuery,
-	}
-}
-
 // postInstallHandler lets the handler to run only if firstRun is false.
-// Otherwise, it redirects to /install.html.  It also enforces HTTPS if it is
-// enabled and configured and sets appropriate access control headers.
+// Otherwise, it redirects to /install.html.
 func (web *webAPI) postInstallHandler(handler http.Handler) (wrapped http.Handler) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -447,8 +314,6 @@ func (web *webAPI) postInstallHandler(handler http.Handler) (wrapped http.Handle
 			return
 		}
 
-		if web.handleHTTPSRedirect(w, r) {
-			handler.ServeHTTP(w, r)
-		}
+		handler.ServeHTTP(w, r)
 	})
 }

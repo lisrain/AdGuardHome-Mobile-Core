@@ -1,18 +1,13 @@
 package home
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/netip"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
-	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
-	"github.com/AdguardTeam/AdGuardHome/internal/filtering/safesearch"
-	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 )
@@ -35,25 +30,18 @@ type clientJSON struct {
 	DisallowedRule *string `json:"disallowed_rule,omitempty"`
 
 	// WHOIS is the filtered WHOIS data of a client.
-	WHOIS          *whois.Info                 `json:"whois_info,omitempty"`
-	SafeSearchConf *filtering.SafeSearchConfig `json:"safe_search"`
-
-	// Schedule is blocked services schedule for every day of the week.
-	Schedule *schedule.Weekly `json:"blocked_services_schedule"`
+	WHOIS *whois.Info `json:"whois_info,omitempty"`
 
 	Name string `json:"name"`
 
-	// BlockedServices is the names of blocked services.
-	BlockedServices []string `json:"blocked_services"`
-	IDs             []string `json:"ids"`
-	Tags            []string `json:"tags"`
-	Upstreams       []string `json:"upstreams"`
+	IDs       []string `json:"ids"`
+	Tags      []string `json:"tags"`
+	Upstreams []string `json:"upstreams"`
 
-	FilteringEnabled         bool `json:"filtering_enabled"`
-	ParentalEnabled          bool `json:"parental_enabled"`
-	SafeBrowsingEnabled      bool `json:"safebrowsing_enabled"`
-	UseGlobalBlockedServices bool `json:"use_global_blocked_services"`
-	UseGlobalSettings        bool `json:"use_global_settings"`
+	FilteringEnabled    bool `json:"filtering_enabled"`
+	ParentalEnabled     bool `json:"parental_enabled"`
+	SafeBrowsingEnabled bool `json:"safebrowsing_enabled"`
+	UseGlobalSettings   bool `json:"use_global_settings"`
 
 	IgnoreQueryLog   aghalg.NullBool `json:"ignore_querylog"`
 	IgnoreStatistics aghalg.NullBool `json:"ignore_statistics"`
@@ -128,16 +116,9 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 
 // jsonToClient converts JSON object to persistent client object if there are no
 // errors.
-func (clients *clientsContainer) jsonToClient(
-	ctx context.Context,
-	cj clientJSON,
-) (c *client.Persistent, err error) {
+func (clients *clientsContainer) jsonToClient(cj clientJSON) (c *client.Persistent, err error) {
 	c = &client.Persistent{}
-	err = initPersistentFromJSON(c, cj)
-	if err != nil {
-		// Don't wrap the error since it's informative enough as is.
-		return nil, err
-	}
+	initPersistentFromJSON(c, cj)
 
 	err = c.SetIDs(cj.IDs)
 	if err != nil {
@@ -152,45 +133,19 @@ func (clients *clientsContainer) jsonToClient(
 	c.FilteringEnabled = cj.FilteringEnabled
 	c.ParentalEnabled = cj.ParentalEnabled
 	c.SafeBrowsingEnabled = cj.SafeBrowsingEnabled
-	c.UseOwnBlockedServices = !cj.UseGlobalBlockedServices
-
-	if ssc := cj.SafeSearchConf; ssc != nil {
-		c.SafeSearchConf = *ssc
-	}
-
-	if c.SafeSearchConf.Enabled {
-		logger := clients.baseLogger.With(
-			slogutil.KeyPrefix, safesearch.LogPrefix,
-			safesearch.LogKeyClient, c.Name,
-		)
-		var ss *safesearch.Default
-		ss, err = safesearch.NewDefault(ctx, &safesearch.DefaultConfig{
-			Logger:         logger,
-			ServicesConfig: c.SafeSearchConf,
-			ClientName:     c.Name,
-			CacheSize:      clients.safeSearchCacheSize,
-			CacheTTL:       clients.safeSearchCacheTTL,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("creating safesearch for client %q: %w", c.Name, err)
-		}
-
-		c.SafeSearch = ss
-	}
 
 	return c, nil
 }
 
 // initPersistentFromJSON initializes c values from the JSON for the following
 // fields:
-//   - [client.Persistent.BlockedServices]
 //   - [client.Persistent.IgnoreQueryLog]
 //   - [client.Persistent.IgnoreStatistics]
 //   - [client.Persistent.UpstreamsCacheEnabled]
 //   - [client.Persistent.UpstreamsCacheSize]
 //
 // c must not be nil.
-func initPersistentFromJSON(c *client.Persistent, cj clientJSON) (err error) {
+func initPersistentFromJSON(c *client.Persistent, cj clientJSON) {
 	if cj.IgnoreQueryLog != aghalg.NBNull {
 		c.IgnoreQueryLog = cj.IgnoreQueryLog == aghalg.NBTrue
 	}
@@ -203,39 +158,6 @@ func initPersistentFromJSON(c *client.Persistent, cj clientJSON) (err error) {
 		c.UpstreamsCacheEnabled = cj.UpstreamsCacheEnabled == aghalg.NBTrue
 		c.UpstreamsCacheSize = cj.UpstreamsCacheSize
 	}
-
-	c.BlockedServices, err = copyBlockedServices(cj.Schedule, cj.BlockedServices)
-	if err != nil {
-		return fmt.Errorf("invalid blocked services: %w", err)
-	}
-
-	return nil
-}
-
-// copyBlockedServices converts a JSON blocked services to an internal blocked
-// services.
-func copyBlockedServices(
-	sch *schedule.Weekly,
-	svcStrs []string,
-) (svcs *filtering.BlockedServices, err error) {
-	var weekly *schedule.Weekly
-	if sch != nil {
-		weekly = sch.Clone()
-	} else {
-		weekly = schedule.EmptyWeekly()
-	}
-
-	svcs = &filtering.BlockedServices{
-		Schedule: weekly,
-		IDs:      svcStrs,
-	}
-
-	err = svcs.Validate()
-	if err != nil {
-		return nil, fmt.Errorf("validating blocked services: %w", err)
-	}
-
-	return svcs, nil
 }
 
 // clientToJSON converts persistent client object to JSON object.
@@ -247,13 +169,7 @@ func clientToJSON(c *client.Persistent) (cj *clientJSON) {
 		UseGlobalSettings:   !c.UseOwnSettings,
 		FilteringEnabled:    c.FilteringEnabled,
 		ParentalEnabled:     c.ParentalEnabled,
-		SafeSearchConf:      new(c.SafeSearchConf),
 		SafeBrowsingEnabled: c.SafeBrowsingEnabled,
-
-		UseGlobalBlockedServices: !c.UseOwnBlockedServices,
-
-		Schedule:        c.BlockedServices.Schedule,
-		BlockedServices: c.BlockedServices.IDs,
 
 		Upstreams: c.Upstreams,
 
@@ -286,7 +202,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	c, err := clients.jsonToClient(ctx, cj)
+	c, err := clients.jsonToClient(cj)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
 
@@ -375,7 +291,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	c, err := clients.jsonToClient(ctx, dj.Data)
+	c, err := clients.jsonToClient(dj.Data)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
 
@@ -516,11 +432,9 @@ func (clients *clientsContainer) findRuntime(
 	}
 }
 
-// registerWebHandlers registers HTTP handlers.
+// registerWebHandlers registers HTTP handlers.  Only the read-only endpoint is
+// kept: client settings are disabled in this mobile-oriented build, but the
+// client list is still needed by custom rules.
 func (clients *clientsContainer) registerWebHandlers() {
 	clients.httpReg.Register(http.MethodGet, "/control/clients", clients.handleGetClients)
-	clients.httpReg.Register(http.MethodPost, "/control/clients/add", clients.handleAddClient)
-	clients.httpReg.Register(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
-	clients.httpReg.Register(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)
-	clients.httpReg.Register(http.MethodPost, "/control/clients/search", clients.handleSearchClient)
 }

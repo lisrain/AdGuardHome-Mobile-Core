@@ -24,9 +24,7 @@ import (
 //
 // stdout and stderr must not be nil.
 //
-// TODO(a.garipov):  Once package ossvc learns to reason about service files,
-// remove these options from them instead of ignoring them.  Alternatively, just
-// remove this handling in a future version.
+// TODO(a.garipov):  Remove this handling in a future version.
 func filterNoOpOpts(opts []string, stdout, stderr io.Writer) (res []string, noEtcHosts bool) {
 	res = make([]string, 0, len(opts))
 

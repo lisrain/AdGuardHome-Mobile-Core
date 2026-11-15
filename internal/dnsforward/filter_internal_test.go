@@ -45,7 +45,6 @@ func TestServer_filterDNSResponse(t *testing.T) {
 		DNSFilter:   f,
 		PrivateNets: netutil.SubnetSetFunc(netutil.IsLocallyServed),
 		Logger:      testLogger,
-		TLSManager:  testTLSManager,
 	})
 	require.NoError(t, err)
 

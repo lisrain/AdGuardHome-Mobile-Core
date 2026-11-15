@@ -101,7 +101,6 @@ func TestStats(t *testing.T) {
 		wantData := &stats.StatsResp{
 			TimeUnits:             "hours",
 			TopQueried:            []map[string]uint64{0: {reqDomain: 1}},
-			TopClients:            []map[string]uint64{0: {cliIPStr: 2}},
 			TopBlocked:            []map[string]uint64{0: {reqDomain: 1}},
 			TopUpstreamsResponses: []map[string]uint64{0: {respUpstream: 2}},
 			TopUpstreamsAvgTime:   []map[string]float64{0: {respUpstream: 0.222222}},
@@ -155,7 +154,6 @@ func TestStats(t *testing.T) {
 		emptyData := &stats.StatsResp{
 			TimeUnits:             "hours",
 			TopQueried:            []map[string]uint64{},
-			TopClients:            []map[string]uint64{},
 			TopBlocked:            []map[string]uint64{},
 			TopUpstreamsResponses: []map[string]uint64{},
 			TopUpstreamsAvgTime:   []map[string]float64{},

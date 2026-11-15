@@ -73,15 +73,12 @@ func TestDNSForwardHTTP_handleGetConfig(t *testing.T) {
 		BlockedResponseTTL:    testBlockedRespTTL,
 		SafeBrowsingEnabled:   true,
 		SafeBrowsingCacheSize: 1000,
-		SafeSearchConf:        filtering.SafeSearchConfig{Enabled: true},
-		SafeSearchCacheSize:   1000,
 		ParentalCacheSize:     1000,
 		CacheTime:             30,
 	}
 	forwardConf := ServerConfig{
 		UDPListenAddrs:         []*net.UDPAddr{},
 		TCPListenAddrs:         []*net.TCPAddr{},
-		TLSConf:                &TLSConfig{},
 		UpstreamDNS:            []string{"8.8.8.8:53", "8.8.4.4:53"},
 		FallbackDNS:            []string{"9.9.9.10"},
 		RatelimitSubnetLenIPv4: 24,
@@ -90,9 +87,8 @@ func TestDNSForwardHTTP_handleGetConfig(t *testing.T) {
 		EDNSClientSubnet:       &EDNSClientSubnet{Enabled: false},
 		ClientsContainer:       EmptyClientsContainer{},
 		ConfModifier:           agh.EmptyConfigModifier{},
-		ServePlainDNS:          true,
 	}
-	s := createTestServer(t, filterConf, forwardConf, testTLSManager)
+	s := createTestServer(t, filterConf, forwardConf)
 	s.sysResolvers = &emptySysResolvers{}
 
 	require.NoError(t, s.Start(testutil.ContextWithTimeout(t, testTimeout)))
@@ -157,15 +153,12 @@ func TestDNSForwardHTTP_handleSetConfig(t *testing.T) {
 		BlockedResponseTTL:    testBlockedRespTTL,
 		SafeBrowsingEnabled:   true,
 		SafeBrowsingCacheSize: 1000,
-		SafeSearchConf:        filtering.SafeSearchConfig{Enabled: true},
-		SafeSearchCacheSize:   1000,
 		ParentalCacheSize:     1000,
 		CacheTime:             30,
 	}
 	forwardConf := ServerConfig{
 		UDPListenAddrs:         []*net.UDPAddr{},
 		TCPListenAddrs:         []*net.TCPAddr{},
-		TLSConf:                &TLSConfig{},
 		UpstreamDNS:            []string{"8.8.8.8:53", "8.8.4.4:53"},
 		RatelimitSubnetLenIPv4: 24,
 		RatelimitSubnetLenIPv6: 56,
@@ -173,9 +166,8 @@ func TestDNSForwardHTTP_handleSetConfig(t *testing.T) {
 		EDNSClientSubnet:       &EDNSClientSubnet{Enabled: false},
 		ClientsContainer:       EmptyClientsContainer{},
 		ConfModifier:           agh.EmptyConfigModifier{},
-		ServePlainDNS:          true,
 	}
-	s := createTestServer(t, filterConf, forwardConf, testTLSManager)
+	s := createTestServer(t, filterConf, forwardConf)
 	s.sysResolvers = &emptySysResolvers{}
 
 	defaultConf := s.conf
@@ -394,13 +386,10 @@ func TestServer_HandleTestUpstreamDNS(t *testing.T) {
 			UDPListenAddrs:   []*net.UDPAddr{{}},
 			TCPListenAddrs:   []*net.TCPAddr{{}},
 			UpstreamTimeout:  upsTimeout,
-			TLSConf:          &TLSConfig{},
 			UpstreamMode:     proxy.UpstreamModeLoadBalance,
 			EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
 			ClientsContainer: EmptyClientsContainer{},
-			ServePlainDNS:    true,
 		},
-		testTLSManager,
 	)
 	srv.etcHosts = upstream.NewHostsResolver(hc)
 	startDeferStop(t, srv)

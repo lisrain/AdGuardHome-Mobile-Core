@@ -3,8 +3,6 @@ package dnsforward
 import (
 	"cmp"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"net"
 	"net/netip"
 	"testing"
@@ -18,11 +16,6 @@ import (
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	ddrTestDomainName = "dns.example.net"
-	ddrTestFQDN       = ddrTestDomainName + "."
 )
 
 func TestServer_ProcessInitial(t *testing.T) {
@@ -77,19 +70,16 @@ func TestServer_ProcessInitial(t *testing.T) {
 			t.Parallel()
 
 			c := ServerConfig{
-				TLSConf:          &TLSConfig{},
 				AAAADisabled:     tc.aaaaDisabled,
 				UpstreamMode:     proxy.UpstreamModeLoadBalance,
 				EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
 				ClientsContainer: EmptyClientsContainer{},
-				ServePlainDNS:    true,
 			}
 
 			s := createTestServer(
 				t,
 				&filtering.Config{BlockingMode: filtering.BlockingModeDefault},
 				c,
-				testTLSManager,
 			)
 
 			var gotAddr netip.Addr
@@ -179,19 +169,16 @@ func TestServer_ProcessFilteringAfterResponse(t *testing.T) {
 			t.Parallel()
 
 			c := ServerConfig{
-				TLSConf:          &TLSConfig{},
 				AAAADisabled:     tc.aaaaDisabled,
 				UpstreamMode:     proxy.UpstreamModeLoadBalance,
 				EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
 				ClientsContainer: EmptyClientsContainer{},
-				ServePlainDNS:    true,
 			}
 
 			s := createTestServer(
 				t,
 				&filtering.Config{BlockingMode: filtering.BlockingModeDefault},
 				c,
-				testTLSManager,
 			)
 
 			resp := newResp(dns.RcodeSuccess, tc.req, tc.respAns)
@@ -214,177 +201,6 @@ func TestServer_ProcessFilteringAfterResponse(t *testing.T) {
 			gotRC := s.processFilteringAfterResponse(ctx, testLogger, dctx)
 			assert.Equal(t, tc.wantRC, gotRC)
 			assert.Equal(t, newResp(dns.RcodeSuccess, tc.req, tc.wantRespAns), dctx.proxyCtx.Res)
-		})
-	}
-}
-
-func TestServer_ProcessDDRQuery(t *testing.T) {
-	dohSVCB := &dns.SVCB{
-		Priority: 1,
-		Target:   ddrTestFQDN,
-		Value: []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"h2"}},
-			&dns.SVCBPort{Port: 8044},
-			&dns.SVCBDoHPath{Template: "/dns-query{?dns}"},
-		},
-	}
-
-	dotSVCB := &dns.SVCB{
-		Priority: 1,
-		Target:   ddrTestFQDN,
-		Value: []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"dot"}},
-			&dns.SVCBPort{Port: 8043},
-		},
-	}
-
-	doqSVCB := &dns.SVCB{
-		Priority: 1,
-		Target:   ddrTestFQDN,
-		Value: []dns.SVCBKeyValue{
-			&dns.SVCBAlpn{Alpn: []string{"doq"}},
-			&dns.SVCBPort{Port: 8042},
-		},
-	}
-
-	addrsDoH := []netip.AddrPort{netip.AddrPortFrom(netutil.IPv4Localhost(), 8044)}
-	addrsDoT := []*net.TCPAddr{{Port: 8043}}
-	addrsDoQ := []*net.UDPAddr{{Port: 8042}}
-
-	testCases := []struct {
-		name       string
-		host       string
-		want       []*dns.SVCB
-		wantRes    resultCode
-		addrsDoH   []netip.AddrPort
-		addrsDoT   []*net.TCPAddr
-		addrsDoQ   []*net.UDPAddr
-		qtype      uint16
-		ddrEnabled bool
-	}{{
-		name:       "pass_host",
-		wantRes:    resultCodeSuccess,
-		host:       testQuestionTarget,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoH:   addrsDoH,
-	}, {
-		name:       "pass_qtype",
-		wantRes:    resultCodeFinish,
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeA,
-		ddrEnabled: true,
-		addrsDoH:   addrsDoH,
-	}, {
-		name:       "pass_disabled_tls",
-		wantRes:    resultCodeFinish,
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-	}, {
-		name:       "pass_disabled_ddr",
-		wantRes:    resultCodeSuccess,
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: false,
-		addrsDoH:   addrsDoH,
-	}, {
-		name:       "dot",
-		wantRes:    resultCodeFinish,
-		want:       []*dns.SVCB{dotSVCB},
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoT:   addrsDoT,
-	}, {
-		name:       "doh",
-		wantRes:    resultCodeFinish,
-		want:       []*dns.SVCB{dohSVCB},
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoH:   addrsDoH,
-	}, {
-		name:       "doq",
-		wantRes:    resultCodeFinish,
-		want:       []*dns.SVCB{doqSVCB},
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoQ:   addrsDoQ,
-	}, {
-		name:       "dot_doh",
-		wantRes:    resultCodeFinish,
-		want:       []*dns.SVCB{dotSVCB, dohSVCB},
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoT:   addrsDoT,
-		addrsDoH:   addrsDoH,
-	}, {
-		name:       "dot_doq_no_doh",
-		wantRes:    resultCodeFinish,
-		want:       []*dns.SVCB{dotSVCB, doqSVCB},
-		host:       ddrHostFQDN,
-		qtype:      dns.TypeSVCB,
-		ddrEnabled: true,
-		addrsDoT:   addrsDoT,
-		addrsDoQ:   addrsDoQ,
-	}}
-
-	tlsConf, _, _ := createServerTLSConfig(t)
-
-	tlsManager := &aghtest.Manager{}
-	tlsManager.OnTLSConfig = func() (conf *tls.Config) { return tlsConf }
-	tlsManager.OnHasIPAddrs = func() (ok bool) { return true }
-	tlsManager.OnRootCAs = func() (cert *x509.CertPool) { return tlsConf.RootCAs }
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			s := createTestServer(
-				t,
-				&filtering.Config{
-					BlockingMode: filtering.BlockingModeDefault,
-				},
-				ServerConfig{
-					HandleDDR:        tc.ddrEnabled,
-					UpstreamMode:     proxy.UpstreamModeLoadBalance,
-					EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
-					ClientsContainer: EmptyClientsContainer{},
-					TLSConf: &TLSConfig{
-						ServerName:       ddrTestDomainName,
-						TLSListenAddrs:   tc.addrsDoT,
-						HTTPSListenAddrs: tc.addrsDoH,
-						QUICListenAddrs:  tc.addrsDoQ,
-					},
-					ServePlainDNS: true,
-				},
-				tlsManager,
-			)
-
-			req := createTestMessageWithType(tc.host, tc.qtype)
-
-			dctx := &dnsContext{
-				proxyCtx: &proxy.DNSContext{
-					Req: req,
-				},
-			}
-
-			res := s.processDDRQuery(testutil.ContextWithTimeout(t, testTimeout), testLogger, dctx)
-			require.Equal(t, tc.wantRes, res)
-
-			if tc.wantRes != resultCodeFinish {
-				return
-			}
-
-			msg := dctx.proxyCtx.Res
-			require.NotNil(t, msg)
-
-			for _, v := range tc.want {
-				v.Hdr = s.hdr(req, dns.TypeSVCB)
-			}
-
-			assert.ElementsMatch(t, tc.want, msg.Answer)
 		})
 	}
 }
@@ -685,15 +501,12 @@ func TestServer_ProcessUpstream_localPTR(t *testing.T) {
 			ServerConfig{
 				UDPListenAddrs:    []*net.UDPAddr{{}},
 				TCPListenAddrs:    []*net.TCPAddr{{}},
-				TLSConf:           &TLSConfig{},
 				UpstreamMode:      proxy.UpstreamModeLoadBalance,
 				EDNSClientSubnet:  &EDNSClientSubnet{Enabled: false},
 				ClientsContainer:  EmptyClientsContainer{},
 				UsePrivateRDNS:    true,
 				LocalPTRResolvers: []string{localUpsAddr},
-				ServePlainDNS:     true,
 			},
-			testTLSManager,
 		)
 		ctx := testutil.ContextWithTimeout(t, testTimeout)
 		pctx := newPrxCtx()
@@ -714,15 +527,12 @@ func TestServer_ProcessUpstream_localPTR(t *testing.T) {
 			ServerConfig{
 				UDPListenAddrs:    []*net.UDPAddr{{}},
 				TCPListenAddrs:    []*net.TCPAddr{{}},
-				TLSConf:           &TLSConfig{},
 				UpstreamMode:      proxy.UpstreamModeLoadBalance,
 				EDNSClientSubnet:  &EDNSClientSubnet{Enabled: false},
 				ClientsContainer:  EmptyClientsContainer{},
 				UsePrivateRDNS:    false,
 				LocalPTRResolvers: []string{localUpsAddr},
-				ServePlainDNS:     true,
 			},
-			testTLSManager,
 		)
 		pctx := newPrxCtx()
 

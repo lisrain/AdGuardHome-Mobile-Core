@@ -32,12 +32,6 @@ type options struct {
 	// pidFile is the file name for the file to which the PID is saved.
 	pidFile string
 
-	// serviceControlAction is the service action to perform.  See
-	// [service.ControlAction] and [handleServiceControlAction].
-	//
-	// TODO(e.burkov):  Use [ossvc.ActionName].
-	serviceControlAction string
-
 	// bindAddr is the address to serve the web UI on.
 	bindAddr netip.AddrPort
 
@@ -55,13 +49,6 @@ type options struct {
 
 	// verbose shows if verbose logging is enabled.
 	verbose bool
-
-	// runningAsService flag is set to true when options are passed from the
-	// service runner
-	//
-	// TODO(a.garipov): Perhaps this could be determined by a non-empty
-	// serviceControlAction?
-	runningAsService bool
 
 	// glinetMode shows if the GL-Inet compatibility mode is enabled.
 	glinetMode bool
@@ -86,7 +73,6 @@ func initCmdLineOpts() {
 		effect: func(o options, exec string) (effect, error) {
 			return func() error { printHelp(exec); exitWithError(); return nil }, nil
 		},
-		serialize:   func(o options) (val string, ok bool) { return "", false },
 		description: "Print this help.",
 		longName:    "help",
 		shortName:   "h",
@@ -103,11 +89,6 @@ type cmdLineOpt struct {
 	updateNoValue   func(o options) (updated options, err error)
 	effect          func(o options, exec string) (eff effect, err error)
 
-	// serialize is a function that encodes the option into a slice of
-	// command-line arguments, if necessary.  If ok is false, this option should
-	// be skipped.
-	serialize func(o options) (val string, ok bool)
-
 	description string
 	longName    string
 	shortName   string
@@ -121,17 +102,13 @@ var cmdLineOpts = []cmdLineOpt{{
 	},
 	updateNoValue: nil,
 	effect:        nil,
-	serialize: func(o options) (val string, ok bool) {
-		return o.confFilename, o.confFilename != ""
-	},
-	description: "Path to the config file.",
-	longName:    "config",
-	shortName:   "c",
+	description:   "Path to the config file.",
+	longName:      "config",
+	shortName:     "c",
 }, {
 	updateWithValue: func(o options, v string) (options, error) { o.workDir = v; return o, nil },
 	updateNoValue:   nil,
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return o.workDir, o.workDir != "" },
 	description:     "Path to the working directory.",
 	longName:        "work-dir",
 	shortName:       "w",
@@ -143,31 +120,13 @@ var cmdLineOpts = []cmdLineOpt{{
 	},
 	updateNoValue: nil,
 	effect:        nil,
-	serialize: func(o options) (val string, ok bool) {
-		return o.bindAddr.String(), o.bindAddr.IsValid()
-	},
-	description: "Address to serve the web UI on, in the host:port format.",
-	longName:    "web-addr",
-	shortName:   "",
-}, {
-	updateWithValue: func(o options, v string) (options, error) {
-		o.serviceControlAction = v
-		return o, nil
-	},
-	updateNoValue: nil,
-	effect:        nil,
-	serialize: func(o options) (val string, ok bool) {
-		return o.serviceControlAction, o.serviceControlAction != ""
-	},
-	description: `Service control action: status, install (as a service), ` +
-		`uninstall (as a service), start, stop, restart, reload (configuration).`,
-	longName:  "service",
-	shortName: "s",
+	description:   "Address to serve the web UI on, in the host:port format.",
+	longName:      "web-addr",
+	shortName:     "",
 }, {
 	updateWithValue: func(o options, v string) (options, error) { o.logFile = v; return o, nil },
 	updateNoValue:   nil,
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return o.logFile, o.logFile != "" },
 	description: `Path to log file.  If empty, write to stdout; ` +
 		`if "syslog", write to system log.`,
 	longName:  "logfile",
@@ -176,7 +135,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: func(o options, v string) (options, error) { o.pidFile = v; return o, nil },
 	updateNoValue:   nil,
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return o.pidFile, o.pidFile != "" },
 	description:     "Path to a file where PID is stored.",
 	longName:        "pidfile",
 	shortName:       "",
@@ -184,7 +142,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.checkConfig = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.checkConfig },
 	description:     "Check configuration and exit.",
 	longName:        "check-config",
 	shortName:       "",
@@ -192,7 +149,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.disableUpdate = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.disableUpdate },
 	description:     "Don't check for updates.",
 	longName:        "no-check-update",
 	shortName:       "",
@@ -200,15 +156,13 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.performUpdate = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.performUpdate },
-	description:     "Update the current binary and restart the service in case it's installed.",
+	description:     "Update the current binary and exit.",
 	longName:        "update",
 	shortName:       "",
 }, {
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.localFrontend = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.localFrontend },
 	description:     "Use local frontend directories.",
 	longName:        "local-frontend",
 	shortName:       "",
@@ -216,7 +170,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.verbose = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.verbose },
 	description:     "Enable verbose output.",
 	longName:        "verbose",
 	shortName:       "v",
@@ -224,7 +177,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.glinetMode = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.glinetMode },
 	description:     "Run in GL-Inet compatibility mode.",
 	longName:        "glinet",
 	shortName:       "",
@@ -232,7 +184,6 @@ var cmdLineOpts = []cmdLineOpt{{
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.noPermCheck = true; return o, nil },
 	effect:          nil,
-	serialize:       func(o options) (val string, ok bool) { return "", o.noPermCheck },
 	description: "Skip checking and migration of permissions " +
 		"of security-sensitive files.",
 	longName:  "no-permcheck",
@@ -253,7 +204,6 @@ var cmdLineOpts = []cmdLineOpt{{
 			return nil
 		}, nil
 	},
-	serialize:   func(o options) (val string, ok bool) { return "", false },
 	description: "Show the version and exit.  Show more detailed version description with -v.",
 	longName:    "version",
 	shortName:   "",
@@ -447,26 +397,4 @@ func chainEffect(prev, next effect) (eff effect) {
 	}
 
 	return eff
-}
-
-// optsToArgs converts command line options into a list of arguments.
-func optsToArgs(o options) (args []string) {
-	for _, opt := range cmdLineOpts {
-		val, ok := opt.serialize(o)
-		if !ok {
-			continue
-		}
-
-		if opt.shortName != "" {
-			args = append(args, "-"+opt.shortName)
-		} else {
-			args = append(args, "--"+opt.longName)
-		}
-
-		if val != "" {
-			args = append(args, val)
-		}
-	}
-
-	return args
 }

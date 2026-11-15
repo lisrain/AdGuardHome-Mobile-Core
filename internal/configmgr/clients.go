@@ -37,12 +37,6 @@ type ClientSourcesConfig struct {
 
 // Client represents the on-disk persistent client.
 type Client struct {
-	// BlockedServices is the configuration of blocked services of a client.
-	BlockedServices *BlockedServices `yaml:"blocked_services"`
-
-	// SafeSearchConf is the safe search configuration of a client.
-	SafeSearchConf *SafeSearch `yaml:"safe_search"`
-
 	// Name is the human-readable name of the client.
 	Name string `yaml:"name"`
 
@@ -81,10 +75,6 @@ type Client struct {
 
 	// UpstreamsCacheEnabled indicates if the DNS cache is enabled.
 	UpstreamsCacheEnabled bool `yaml:"upstreams_cache_enabled"`
-
-	// UseGlobalBlockedServices indicates if the client uses the global blocked
-	// services configuration.
-	UseGlobalBlockedServices bool `yaml:"use_global_blocked_services"`
 
 	// UseGlobalSettings indicates if the client uses the global filtering
 	// settings.

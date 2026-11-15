@@ -7,19 +7,16 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"runtime"
 	"syscall"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
-	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/updater"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/osutil"
-	"github.com/AdguardTeam/golibs/osutil/executil"
 )
 
 // temporaryError is the interface for temporary errors from the Go standard
@@ -66,8 +63,7 @@ func (web *webAPI) handleVersionJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	extTLSConf := web.tlsManager.ExtendedTLSConfig()
-	err = resp.setAllowedToAutoUpdate(ctx, l, extTLSConf)
+	err = resp.setAllowedToAutoUpdate(ctx, l)
 	if err != nil {
 		// Don't wrap the error, because it's informative enough as is.
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusInternalServerError, "%s", err)
@@ -181,20 +177,17 @@ type versionResponse struct {
 const maxPrivilegedPort = 1024
 
 // setAllowedToAutoUpdate sets CanAutoUpdate to true if AdGuard Home is actually
-// allowed to perform an automatic update by the OS.  l and extTLSConf must not
-// be nil.
+// allowed to perform an automatic update by the OS.  l must not be nil.
 func (vr *versionResponse) setAllowedToAutoUpdate(
 	ctx context.Context,
 	l *slog.Logger,
-	extTLSConf *aghtls.ExtendedTLSConfig,
 ) (err error) {
 	if vr.CanAutoUpdate != aghalg.NBTrue {
 		return nil
 	}
 
 	canUpdate := true
-	if extTLSConf.UsesPrivilegedPorts(maxPrivilegedPort) ||
-		config.HTTPConfig.Address.Port() < maxPrivilegedPort ||
+	if config.HTTPConfig.Address.Port() < maxPrivilegedPort ||
 		config.DNS.Port < maxPrivilegedPort {
 		canUpdate, err = aghnet.CanBindPrivilegedPorts(ctx, l)
 		if err != nil {
@@ -228,55 +221,8 @@ func (web *webAPI) finishUpdate(
 	cleanup(ctx, web.logger, web.hostsContainer)
 	cleanupAlways(ctx, web.logger, web.pidFilePath)
 
-	if runtime.GOOS == "windows" {
-		web.finalizeWindowsUpdate(ctx, execPath)
-
-		os.Exit(osutil.ExitCodeSuccess)
-	}
-
 	web.logger.InfoContext(ctx, "restarting", "exec_path", execPath, "args", os.Args[1:])
 	err = syscall.Exec(execPath, os.Args, os.Environ())
-	if err != nil {
-		panic(fmt.Errorf("restarting: %w", err))
-	}
-}
-
-// finalizeWindowsUpdate completes an update procedure on windows.
-func (web *webAPI) finalizeWindowsUpdate(
-	ctx context.Context,
-	execPath string,
-) {
-	var commandConf *executil.CommandConfig
-
-	if web.conf.runningAsService {
-		// NOTE: We can't restart the service via "kardianos/service" package,
-		// because it kills the process first we can't start a new instance,
-		// because Windows doesn't allow it.
-		//
-		// TODO(a.garipov): Recheck the claim above.
-		commandConf = &executil.CommandConfig{
-			Path: "cmd",
-			Args: []string{"/c", "net stop AdGuardHome & net start AdGuardHome"},
-		}
-	} else {
-		commandConf = &executil.CommandConfig{
-			Path:   execPath,
-			Args:   os.Args[1:],
-			Stdin:  os.Stdin,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-		}
-	}
-
-	web.logger.InfoContext(ctx, "restarting", "exec_path", execPath, "args", os.Args[1:])
-
-	var cmd executil.Command
-	cmd, err := web.cmdCons.New(ctx, commandConf)
-	if err != nil {
-		panic(fmt.Errorf("constructing cmd: %w", err))
-	}
-
-	err = cmd.Start(ctx)
 	if err != nil {
 		panic(fmt.Errorf("restarting: %w", err))
 	}

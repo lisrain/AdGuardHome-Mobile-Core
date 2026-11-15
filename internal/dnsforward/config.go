@@ -2,14 +2,12 @@ package dnsforward
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
 	"os"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/agh"
@@ -17,7 +15,6 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghslog"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
-	"github.com/AdguardTeam/dnscrypt"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/ratelimit"
 	"github.com/AdguardTeam/dnsproxy/upstream"
@@ -151,9 +148,6 @@ type Config struct {
 	// incoming requests.
 	MaxGoroutines uint `yaml:"max_goroutines"`
 
-	// HandleDDR, if true, handle DDR requests
-	HandleDDR bool `yaml:"handle_ddr"`
-
 	// IpsetList is the ipset configuration that allows AdGuard Home to add IP
 	// addresses of the specified domain names to an ipset list.  Syntax:
 	//
@@ -183,58 +177,6 @@ type EDNSClientSubnet struct {
 	UseCustom bool `yaml:"use_custom"`
 }
 
-// TLSConfig contains the TLS configuration settings for DNSCrypt,
-// DNS-over-HTTPS (DoH), DNS-over-TLS (DoT), DNS-over-QUIC (DoQ), and Discovery
-// of Designated Resolvers (DDR).
-type TLSConfig struct {
-	// DNSCryptConf contains the configuration settings for a DNSCrypt server.
-	// It is nil if the DNSCrypt server is disabled.
-	DNSCryptConf *DNSCryptConfig
-
-	// TLSListenAddrs are the addresses to listen on for DoT connections.  Each
-	// item in the list must be non-nil if TLS has at least one valid
-	// certificate.
-	TLSListenAddrs []*net.TCPAddr
-
-	// QUICListenAddrs are the addresses to listen on for DoQ connections.  Each
-	// item in the list must be non-nil if TLS has at least one valid
-	// certificate.
-	QUICListenAddrs []*net.UDPAddr
-
-	// HTTPSListenAddrs should be the addresses AdGuard Home is listening on for
-	// DoH connections.  These addresses are announced with DDR.  The field is
-	// set only if at least one DoH route is configured.  Each item in
-	// the list must be non-nil.
-	HTTPSListenAddrs []netip.AddrPort
-
-	// ServerName is the hostname of the server.  Currently, it is only being
-	// used for ClientID checking and Discovery of Designated Resolvers (DDR).
-	ServerName string
-
-	// StrictSNICheck controls if the connections with SNI mismatching the
-	// certificate's ones should be rejected.
-	StrictSNICheck bool
-}
-
-// DNSCryptConfig contains the configuration settings for a DNSCrypt server.
-type DNSCryptConfig struct {
-	// ResolverCert is the certificate used for DNSCrypt connections.  It is not
-	// nil if there is at least one UDP or TCP address present.
-	ResolverCert *dnscrypt.Certificate
-
-	// UDPListenAddrs are the addresses to listen on for DNSCrypt UDP
-	// connections.
-	UDPListenAddrs []*net.UDPAddr
-
-	// TCPListenAddrs are the addresses to listen on for DNSCrypt TCP
-	// connections.
-	TCPListenAddrs []*net.TCPAddr
-
-	// ProviderName is the name of the DNSCrypt provider.  It is not empty if
-	// there is at least one UDP or TCP address present.
-	ProviderName string
-}
-
 // ServerConfig represents server configuration.
 // The zero ServerConfig is empty and ready for use.
 type ServerConfig struct {
@@ -258,21 +200,10 @@ type ServerConfig struct {
 	// Remove that.
 	AddrProcConf *client.DefaultAddrProcConfig
 
-	// TLSConf is the TLS configuration for DNS-over-TLS, DNS-over-QUIC, and
-	// HTTPS.  It must not be nil.
-	TLSConf *TLSConfig
-
 	Config
-
-	// TLSAllowUnencryptedDoH defines if unencrypted DoH connections are
-	// allowed.
-	TLSAllowUnencryptedDoH bool
 
 	// UpstreamTimeout is the timeout for querying upstream servers.
 	UpstreamTimeout time.Duration
-
-	// TLSCiphers are the IDs of TLS cipher suites to use.
-	TLSCiphers []uint16
 
 	// ConfModifier is used to update the global configuration.  It must not be
 	// nil.
@@ -295,16 +226,6 @@ type ServerConfig struct {
 	// UseDNS64 defines if DNS64 is enabled for incoming requests.
 	UseDNS64 bool
 
-	// ServeHTTP3 defines if HTTP/3 is be allowed for incoming requests.
-	ServeHTTP3 bool
-
-	// UseHTTP3Upstreams defines if HTTP/3 is be allowed for DNS-over-HTTPS
-	// upstreams.
-	UseHTTP3Upstreams bool
-
-	// ServePlainDNS defines if plain DNS is allowed for incoming requests.
-	ServePlainDNS bool
-
 	// PendingRequestsEnabled defines if duplicate requests should be forwarded
 	// to upstreams along with the original one.
 	PendingRequestsEnabled bool
@@ -325,13 +246,10 @@ func (s *Server) newProxyConfig(ctx context.Context) (conf *proxy.Config, err er
 
 	logMw := newLogMiddleware(s.baseLogger, slogutil.LevelTrace)
 
-	httpConf := &proxy.HTTPConfig{
-		ServerHeader:    aghhttp.UserAgent(),
-		InsecureEnabled: s.conf.TLSAllowUnencryptedDoH,
-	}
-
 	conf = &proxy.Config{
 		Logger:                    s.baseLogger.With(slogutil.KeyPrefix, aghslog.PrefixDNSProxy),
+		UDPListenAddr:             srvConf.UDPListenAddrs,
+		TCPListenAddr:             srvConf.TCPListenAddrs,
 		RefuseAny:                 srvConf.RefuseAny,
 		TrustedProxies:            netutil.SliceSubnetSet(trustedPrefixes),
 		CacheMinTTL:               srvConf.CacheMinTTL,
@@ -352,7 +270,6 @@ func (s *Server) newProxyConfig(ctx context.Context) (conf *proxy.Config, err er
 		PendingRequests: &proxy.PendingRequestsConfig{
 			Enabled: srvConf.PendingRequestsEnabled,
 		},
-		HTTPConfig:         httpConf,
 		UpstreamMode:       srvConf.UpstreamMode,
 		DNSSECEnabled:      srvConf.EnableDNSSEC,
 		FastestPingTimeout: time.Duration(srvConf.FastestTimeout),
@@ -366,13 +283,6 @@ func (s *Server) newProxyConfig(ctx context.Context) (conf *proxy.Config, err er
 	conf.BogusNXDomain, err = parseBogusNXDOMAIN(srvConf.BogusNXDomain)
 	if err != nil {
 		return nil, fmt.Errorf("bogus_nxdomain: %w", err)
-	}
-
-	s.prepareTLS(ctx, conf)
-
-	err = s.preparePlain(ctx, conf)
-	if err != nil {
-		return nil, fmt.Errorf("validating plain: %w", err)
 	}
 
 	conf, err = prepareCacheConfig(
@@ -680,140 +590,6 @@ func (conf *ServerConfig) ourAddrsSet(
 			addrs: container.NewMapSet(ifaceAddrs...),
 		}, nil
 	}
-}
-
-// prepareDNSCrypt sets up the DNSCrypt configuration for the DNS proxy.
-func (s *Server) prepareDNSCrypt(proxyConf *proxy.Config) {
-	dnsCryptConf := s.conf.TLSConf.DNSCryptConf
-	if dnsCryptConf == nil {
-		return
-	}
-
-	proxyConf.DNSCryptUDPListenAddr = dnsCryptConf.UDPListenAddrs
-	proxyConf.DNSCryptTCPListenAddr = dnsCryptConf.TCPListenAddrs
-	proxyConf.DNSCryptProviderName = dnsCryptConf.ProviderName
-	proxyConf.DNSCryptResolverCert = dnsCryptConf.ResolverCert
-}
-
-// prepareTLS sets up the TLS configuration for the DNS proxy.  s.serverLock
-// must be locked.  proxyConf must be non-nil and valid.
-func (s *Server) prepareTLS(ctx context.Context, proxyConf *proxy.Config) {
-	s.prepareDNSCrypt(proxyConf)
-
-	if s.conf.TLSConf.TLSListenAddrs == nil && s.conf.TLSConf.QUICListenAddrs == nil {
-		return
-	}
-
-	proxyConf.TLSListenAddr = s.conf.TLSConf.TLSListenAddrs
-	proxyConf.QUICListenAddr = s.conf.TLSConf.QUICListenAddrs
-
-	proxyConf.TLSConfig = s.tlsManager.TLSConfig()
-	if proxyConf.TLSConfig == nil {
-		s.logger.WarnContext(ctx, "tls configuration is not set")
-
-		return
-	}
-
-	if s.conf.TLSConf.StrictSNICheck && proxyConf.TLSConfig.GetCertificate != nil {
-		s.replaceGetCertificate(proxyConf.TLSConfig)
-	}
-}
-
-// isWildcard returns true if host is a wildcard hostname.
-func isWildcard(host string) (ok bool) {
-	return strings.HasPrefix(host, "*.")
-}
-
-// matchesDomainWildcard returns true if host matches the domain wildcard
-// pattern pat.
-func matchesDomainWildcard(host, pat string) (ok bool) {
-	return isWildcard(pat) && strings.HasSuffix(host, pat[1:])
-}
-
-// anyNameMatches returns true if sni, the client's SNI value, matches any of
-// the DNS names and patterns from certificate.  dnsNames must be sorted.
-func anyNameMatches(dnsNames []string, sni string) (ok bool) {
-	// Check sni is either a valid hostname or a valid IP address.
-	if !netutil.IsValidHostname(sni) && !netutil.IsValidIPString(sni) {
-		return false
-	}
-
-	if _, ok = slices.BinarySearch(dnsNames, sni); ok {
-		return true
-	}
-
-	for _, dn := range dnsNames {
-		if matchesDomainWildcard(sni, dn) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// replaceGetCertificate replaces the TLS.Config.GetCertificate with a wrapped
-// version of the previous one, adding a SNI check.  It must be called only once
-// for each instance of orig.  orig must not be nil and orig.GetCertificate must
-// be populated.
-//
-// TODO(m.kazantsev):  Consider moving this method to aghtls.
-func (s *Server) replaceGetCertificate(orig *tls.Config) {
-	origGetCert := orig.GetCertificate
-
-	orig.GetCertificate = func(chi *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
-		cert, err = origGetCert(chi)
-		if err != nil {
-			// Don't wrap the error, because it is informative enough as is.
-			return nil, err
-		}
-		if cert == nil || cert.Leaf == nil {
-			return nil, errors.Error("tls certificate is not set")
-		}
-
-		var dnsNames []string
-		if len(cert.Leaf.DNSNames) == 0 {
-			dnsNames = []string{cert.Leaf.Subject.CommonName}
-		} else {
-			dnsNames = cert.Leaf.DNSNames
-		}
-
-		if !anyNameMatches(dnsNames, chi.ServerName) {
-			s.logger.WarnContext(
-				chi.Context(),
-				"unknown sni in client hello",
-				"server_name", chi.ServerName,
-			)
-
-			return nil, errors.Error("unknown sni in client hello")
-		}
-
-		return cert, nil
-	}
-}
-
-// preparePlain prepares the plain-DNS configuration for the DNS proxy. The
-// method assumes that prepareTLS has already been called.
-func (s *Server) preparePlain(ctx context.Context, proxyConf *proxy.Config) (err error) {
-	if s.conf.ServePlainDNS {
-		proxyConf.UDPListenAddr = s.conf.UDPListenAddrs
-		proxyConf.TCPListenAddr = s.conf.TCPListenAddrs
-
-		return nil
-	}
-
-	lenEncrypted := len(proxyConf.DNSCryptTCPListenAddr) +
-		len(proxyConf.DNSCryptUDPListenAddr) +
-		len(proxyConf.HTTPConfig.ListenAddresses) +
-		len(proxyConf.QUICListenAddr) +
-		len(proxyConf.TLSListenAddr)
-	if lenEncrypted == 0 {
-		// TODO(a.garipov): Support full disabling of all DNS.
-		return errors.Error("disabling plain dns requires at least one encrypted protocol")
-	}
-
-	s.logger.WarnContext(ctx, "plain dns is disabled")
-
-	return nil
 }
 
 // UpdatedProtectionStatus updates protection state, if the protection was

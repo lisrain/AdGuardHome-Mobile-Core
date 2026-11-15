@@ -15,9 +15,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/arpdb"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
-	"github.com/AdguardTeam/AdGuardHome/internal/filtering/safesearch"
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
-	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
@@ -26,10 +24,6 @@ import (
 
 // clientsContainer is the storage of all runtime and persistent clients.
 type clientsContainer struct {
-	// baseLogger is used to create loggers with custom prefixes for safe search
-	// filter.  It must not be nil.
-	baseLogger *slog.Logger
-
 	// logger is used for logging the operation of the client container.  It
 	// must not be nil.
 	logger *slog.Logger
@@ -53,14 +47,6 @@ type clientsContainer struct {
 	// TODO(a.garipov): Use a pointer and describe which fields are protected in
 	// more detail.  Use sync.RWMutex.
 	lock sync.Mutex
-
-	// safeSearchCacheSize is the size of the safe search cache to use for
-	// persistent clients.
-	safeSearchCacheSize uint
-
-	// safeSearchCacheTTL is the TTL of the safe search cache to use for
-	// persistent clients.
-	safeSearchCacheTTL time.Duration
 }
 
 // BlockedClientChecker checks if a client is blocked by the current access
@@ -92,17 +78,14 @@ func (clients *clientsContainer) Init(
 		return errors.Error("clients container already initialized")
 	}
 
-	clients.baseLogger = baseLogger
 	clients.logger = baseLogger.With(slogutil.KeyPrefix, "client_container")
-	clients.safeSearchCacheSize = filteringConf.SafeSearchCacheSize
-	clients.safeSearchCacheTTL = time.Minute * time.Duration(filteringConf.CacheTime)
 	clients.confModifier = confModifier
 	clients.httpReg = httpReg
 
 	confClients := make([]*client.Persistent, 0, len(conf.Persistent))
 	for i, o := range conf.Persistent {
 		var p *client.Persistent
-		p, err = o.toPersistent(ctx, baseLogger, clients.safeSearchCacheSize, clients.safeSearchCacheTTL)
+		p, err = o.toPersistent()
 		if err != nil {
 			return fmt.Errorf("init persistent client at index %d: %w", i, err)
 		}
@@ -156,11 +139,6 @@ func (clients *clientsContainer) Start(ctx context.Context) (err error) {
 
 // clientObject is the YAML representation of a persistent client.
 type clientObject struct {
-	SafeSearchConf filtering.SafeSearchConfig `yaml:"safe_search"`
-
-	// BlockedServices is the configuration of blocked services of a client.
-	BlockedServices *filtering.BlockedServices `yaml:"blocked_services"`
-
 	Name string `yaml:"name"`
 
 	IDs       []string `yaml:"ids"`
@@ -178,23 +156,17 @@ type clientObject struct {
 	// UpstreamsCacheEnabled indicates if the DNS cache is enabled.
 	UpstreamsCacheEnabled bool `yaml:"upstreams_cache_enabled"`
 
-	UseGlobalSettings        bool `yaml:"use_global_settings"`
-	FilteringEnabled         bool `yaml:"filtering_enabled"`
-	ParentalEnabled          bool `yaml:"parental_enabled"`
-	SafeBrowsingEnabled      bool `yaml:"safebrowsing_enabled"`
-	UseGlobalBlockedServices bool `yaml:"use_global_blocked_services"`
+	UseGlobalSettings   bool `yaml:"use_global_settings"`
+	FilteringEnabled    bool `yaml:"filtering_enabled"`
+	ParentalEnabled     bool `yaml:"parental_enabled"`
+	SafeBrowsingEnabled bool `yaml:"safebrowsing_enabled"`
 
 	IgnoreQueryLog   bool `yaml:"ignore_querylog"`
 	IgnoreStatistics bool `yaml:"ignore_statistics"`
 }
 
 // toPersistent returns an initialized persistent client if there are no errors.
-func (o *clientObject) toPersistent(
-	ctx context.Context,
-	baseLogger *slog.Logger,
-	safeSearchCacheSize uint,
-	safeSearchCacheTTL time.Duration,
-) (cli *client.Persistent, err error) {
+func (o *clientObject) toPersistent() (cli *client.Persistent, err error) {
 	cli = &client.Persistent{
 		Name: o.Name,
 
@@ -205,9 +177,7 @@ func (o *clientObject) toPersistent(
 		UseOwnSettings:        !o.UseGlobalSettings,
 		FilteringEnabled:      o.FilteringEnabled,
 		ParentalEnabled:       o.ParentalEnabled,
-		SafeSearchConf:        o.SafeSearchConf,
 		SafeBrowsingEnabled:   o.SafeBrowsingEnabled,
-		UseOwnBlockedServices: !o.UseGlobalBlockedServices,
 		IgnoreQueryLog:        o.IgnoreQueryLog,
 		IgnoreStatistics:      o.IgnoreStatistics,
 		UpstreamsCacheEnabled: o.UpstreamsCacheEnabled,
@@ -222,40 +192,6 @@ func (o *clientObject) toPersistent(
 	if (cli.UID == client.UID{}) {
 		cli.UID = client.NewUID()
 	}
-
-	if o.SafeSearchConf.Enabled {
-		logger := baseLogger.With(
-			slogutil.KeyPrefix, safesearch.LogPrefix,
-			safesearch.LogKeyClient, cli.Name,
-		)
-		var ss *safesearch.Default
-		ss, err = safesearch.NewDefault(ctx, &safesearch.DefaultConfig{
-			Logger:         logger,
-			ServicesConfig: o.SafeSearchConf,
-			ClientName:     cli.Name,
-			CacheSize:      safeSearchCacheSize,
-			CacheTTL:       safeSearchCacheTTL,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("init safesearch %q: %w", cli.Name, err)
-		}
-
-		cli.SafeSearch = ss
-	}
-
-	if o.BlockedServices == nil {
-		o.BlockedServices = &filtering.BlockedServices{
-			Schedule: schedule.EmptyWeekly(),
-		}
-	}
-
-	o.BlockedServices.FilterUnknownIDs(ctx, baseLogger)
-	err = o.BlockedServices.Validate()
-	if err != nil {
-		return nil, fmt.Errorf("init blocked services %q: %w", cli.Name, err)
-	}
-
-	cli.BlockedServices = o.BlockedServices.Clone()
 
 	cli.Tags = slices.Clone(o.Tags)
 
@@ -273,24 +209,20 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 		objs = append(objs, &clientObject{
 			Name: cli.Name,
 
-			BlockedServices: cli.BlockedServices.Clone(),
-
 			IDs:       cli.Identifiers(),
 			Tags:      slices.Clone(cli.Tags),
 			Upstreams: slices.Clone(cli.Upstreams),
 
 			UID: cli.UID,
 
-			UseGlobalSettings:        !cli.UseOwnSettings,
-			FilteringEnabled:         cli.FilteringEnabled,
-			ParentalEnabled:          cli.ParentalEnabled,
-			SafeSearchConf:           cli.SafeSearchConf,
-			SafeBrowsingEnabled:      cli.SafeBrowsingEnabled,
-			UseGlobalBlockedServices: !cli.UseOwnBlockedServices,
-			IgnoreQueryLog:           cli.IgnoreQueryLog,
-			IgnoreStatistics:         cli.IgnoreStatistics,
-			UpstreamsCacheEnabled:    cli.UpstreamsCacheEnabled,
-			UpstreamsCacheSize:       cli.UpstreamsCacheSize,
+			UseGlobalSettings:     !cli.UseOwnSettings,
+			FilteringEnabled:      cli.FilteringEnabled,
+			ParentalEnabled:       cli.ParentalEnabled,
+			SafeBrowsingEnabled:   cli.SafeBrowsingEnabled,
+			IgnoreQueryLog:        cli.IgnoreQueryLog,
+			IgnoreStatistics:      cli.IgnoreStatistics,
+			UpstreamsCacheEnabled: cli.UpstreamsCacheEnabled,
+			UpstreamsCacheSize:    cli.UpstreamsCacheSize,
 		})
 
 		return true

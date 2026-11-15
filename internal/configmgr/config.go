@@ -40,9 +40,6 @@ type Config struct {
 	// Stats is a block with statistics configuration settings.
 	Stats *StatsConfig `yaml:"statistics"`
 
-	// TLS is a block with TLS configuration settings.
-	TLS *TLSConfig `yaml:"tls"`
-
 	// ProxyURL is the address of proxy server for the internal HTTP client.
 	//
 	// TODO(d.kolyshev):  Use [url.URL].
@@ -60,7 +57,7 @@ type Config struct {
 	//
 	// TODO(e.burkov):  Move all the filtering configuration fields into the
 	// only configuration subsection covering the changes with a single
-	// migration.  Also keep the blocked services in mind.
+	// migration.
 	Filters []*Filter `yaml:"filters"`
 
 	// UserRules is a list of custom rules.
@@ -128,9 +125,6 @@ func (c *Config) Validate() (err error) {
 	}, {
 		Key:   "statistics",
 		Value: c.Stats,
-	}, {
-		Key:   "tls",
-		Value: c.TLS,
 	}}
 
 	var errs []error
