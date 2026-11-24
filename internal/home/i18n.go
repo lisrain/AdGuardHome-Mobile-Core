@@ -7,42 +7,11 @@ import (
 )
 
 // TODO(a.garipov): Get rid of a global or generate from .twosky.json.
+//
+// This fork ships only the locales that are bundled with client_v2.
 var allowedLanguages = container.NewMapSet(
-	"ar",
-	"be",
-	"bg",
-	"cs",
-	"da",
-	"de",
 	"en",
-	"es",
-	"fa",
-	"fi",
-	"fr",
-	"hr",
-	"hu",
-	"id",
-	"it",
-	"ja",
-	"ko",
-	"nl",
-	"no",
-	"pl",
-	"pt-br",
-	"pt-pt",
-	"ro",
-	"ru",
-	"si-lk",
-	"sk",
-	"sl",
-	"sr-cs",
-	"sv",
-	"th",
-	"tr",
-	"uk",
-	"vi",
 	"zh-cn",
-	"zh-hk",
 	"zh-tw",
 )
 
