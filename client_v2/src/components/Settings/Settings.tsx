@@ -11,7 +11,6 @@ import { Button } from 'panel/common/ui/Button';
 import { ConfirmDialog } from 'panel/common/ui/ConfirmDialog';
 import theme from 'panel/lib/theme';
 import { PageLoader } from 'panel/common/ui/Loader';
-import { initSettings, toggleSetting, settingsState } from 'panel/stores/settings';
 import { getStatsConfig, setStatsConfig, resetStats, statsState } from 'panel/stores/stats';
 import { getLogsConfig, setLogsConfig, clearLogs, queryLogsState } from 'panel/stores/queryLogs';
 import { getFilteringStatus, filteringState } from 'panel/stores/filtering';
@@ -28,7 +27,6 @@ import s from './Settings.module.pcss';
 
 export const Settings = () => {
     onMount(() => {
-        initSettings();
         getStatsConfig();
         getFilteringStatus();
         getLogsConfig();
@@ -90,7 +88,6 @@ export const Settings = () => {
 
     const isLoading = createMemo(() => {
         return (
-            !settingsState.initialized ||
             !statsState.configInitialized ||
             !queryLogsState.configInitialized
         );
@@ -142,24 +139,6 @@ export const Settings = () => {
                                     enabled: filteringState.enabled,
                                 }}
                                 processing={filteringState.processingSetConfig}
-                            />
-
-                            <SettingRow
-                                variant="switch"
-                                id="safebrowsing"
-                                title={intl.getMessage('settings_browsing_security')}
-                                description={intl.getMessage('settings_browsing_security_desc')}
-                                checked={!!settingsState.settingsList?.safebrowsing?.enabled}
-                                onChange={(v) => toggleSetting('safebrowsing', !v)}
-                            />
-
-                            <SettingRow
-                                variant="switch"
-                                id="parental"
-                                title={intl.getMessage('settings_parental_control')}
-                                description={intl.getMessage('settings_parental_control_desc')}
-                                checked={!!settingsState.settingsList?.parental?.enabled}
-                                onChange={(v) => toggleSetting('parental', !v)}
                             />
 
                             <div class={s.section} id="query-log">

@@ -21,7 +21,6 @@ import {
     blockDomainForClient,
     disableFilter,
 } from 'panel/stores/filtering';
-import { disableSafeBrowsing, disableParental } from 'panel/stores/settings';
 import { deleteRewrite, getRewritesList } from 'panel/stores/rewrites';
 import { openModal } from 'panel/stores/modals';
 import {
@@ -160,12 +159,6 @@ export const QueryLog = () => {
 
     const handleDisableFilter = (filter: Filter) => {
         disableFilter(filter);
-    };
-    const handleDisableSafeBrowsing = () => {
-        disableSafeBrowsing();
-    };
-    const handleDisableParental = () => {
-        disableParental();
     };
     const handleRemoveRewrite = (rewrite: RewriteEntry) => {
         deleteRewrite(rewrite, { withUndo: true });
@@ -329,8 +322,6 @@ export const QueryLog = () => {
                         onBlock={handleBlockDomain}
                         onAddToAllowlist={handleUnblockDomain}
                         onDisableFilter={handleDisableFilter}
-                        onDisableSafeBrowsing={handleDisableSafeBrowsing}
-                        onDisableParental={handleDisableParental}
                         onRemoveRewrite={handleRemoveRewrite}
                         onEditRewrite={handleEditRewrite}
                     />

@@ -70,11 +70,6 @@ export const Menu = (props: Props) => {
                             routePath: RoutePath.SettingsPage,
                         },
                         { label: 'DNS', path: Paths.Dns, routePath: RoutePath.Dns },
-                        {
-                            label: intl.getMessage('clients'),
-                            path: Paths.Clients,
-                            routePath: RoutePath.Clients,
-                        },
                     ]}
                     isActive={isActive}
                 />
@@ -115,17 +110,6 @@ export const Menu = (props: Props) => {
                         <Icon class={s.linkIcon} icon="log" />
                         <span class={theme.common.textOverflow}>
                             {intl.getMessage('query_log')}
-                        </span>
-                    </Link>
-                </div>
-                <div class={cn(s.menuLinkWrapper)}>
-                    <Link
-                        class={cn(s.menuLink, { [s.activeLink]: isActive(Paths.Guide) })}
-                        to={RoutePath.Guide}
-                    >
-                        <Icon class={s.linkIcon} icon="faq" />
-                        <span class={theme.common.textOverflow}>
-                            {intl.getMessage('setup_guide')}
                         </span>
                     </Link>
                 </div>

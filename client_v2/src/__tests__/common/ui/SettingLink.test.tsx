@@ -15,7 +15,7 @@ const renderLink = (props: { disabled?: boolean } = {}) => {
                 path="/"
                 component={() => (
                     <SettingLink
-                        to={RoutePath.Clients}
+                        to={RoutePath.Dns}
                         title="Title"
                         description="Description"
                         disabled={props.disabled}

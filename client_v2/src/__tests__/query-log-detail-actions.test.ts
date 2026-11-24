@@ -51,17 +51,14 @@ describe('getDetailModalActions', () => {
         ]);
     });
 
-    it('blocked threats → Add to allowlist + Disable Browsing security', () => {
-        expect(getDetailModalActions('blocked_threats', ctx())).toEqual([
-            'add-to-allowlist',
-            'disable-browsing-security',
-        ]);
+    it('blocked threats → Add to allowlist only', () => {
+        expect(getDetailModalActions('blocked_threats', ctx())).toEqual(['add-to-allowlist']);
     });
 
-    it('parental → Add to allowlist + Disable Parental control', () => {
-        expect(getDetailModalActions('blocked_by_parental_control', ctx())).toEqual(
-            ['add-to-allowlist', 'disable-parental'],
-        );
+    it('parental → Add to allowlist only', () => {
+        expect(getDetailModalActions('blocked_by_parental_control', ctx())).toEqual([
+            'add-to-allowlist',
+        ]);
     });
 
     it('safe search → Add to allowlist only', () => {

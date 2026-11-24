@@ -13,18 +13,6 @@ export const blockedPercentage = createMemo(() => {
     return Math.round((numBlockedFiltering / numDnsQueries) * 100);
 });
 
-export const parentalPercentage = createMemo(() => {
-    const { numDnsQueries, numReplacedParental } = statsState;
-    if (!numDnsQueries) return 0;
-    return Math.round((numReplacedParental / numDnsQueries) * 100);
-});
-
-export const safebrowsingPercentage = createMemo(() => {
-    const { numDnsQueries, numReplacedSafebrowsing } = statsState;
-    if (!numDnsQueries) return 0;
-    return Math.round((numReplacedSafebrowsing / numDnsQueries) * 100);
-});
-
 export const isProtectionActive = createMemo(() => {
     return dashboardState.protectionEnabled && dashboardState.isCoreRunning;
 });

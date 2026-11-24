@@ -4,7 +4,6 @@ import cn from 'clsx';
 import intl from 'panel/common/intl';
 import { addSuccessToast } from 'panel/stores/toasts';
 import { filteringState, checkHost, getFilteringStatus, setRules } from 'panel/stores/filtering';
-import { settingsState, initSettings } from 'panel/stores/settings';
 import { rewritesState, getRewritesList } from 'panel/stores/rewrites';
 import { MODAL_TYPE } from 'panel/helpers/constants';
 import theme from 'panel/lib/theme';
@@ -46,10 +45,7 @@ export const UserRules = () => {
     // settled its first request.  Later refetches keep the previous values
     // painted, so the loader can never flash back in.
     const isInitialLoading = createMemo(
-        () =>
-            !filteringState.filtersInitialized ||
-            !settingsState.initialized ||
-            !rewritesState.initialized,
+        () => !filteringState.filtersInitialized || !rewritesState.initialized,
     );
 
     const {
@@ -71,7 +67,6 @@ export const UserRules = () => {
 
     onMount(() => {
         getFilteringStatus();
-        initSettings();
         getRewritesList();
     });
 

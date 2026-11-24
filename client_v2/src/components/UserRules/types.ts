@@ -27,8 +27,6 @@ export type CheckResultData = {
 export type ResultActionKind =
     | 'allow'
     | 'block'
-    | 'disable-parental'
-    | 'disable-safebrowsing'
     | 'disable-filter'
     | 'edit-rewrite'
     | 'delete-rewrite'

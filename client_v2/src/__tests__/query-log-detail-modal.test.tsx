@@ -40,8 +40,6 @@ const defaultProps: ComponentProps<typeof DetailModal> = {
     onBlock: vi.fn(),
     onAddToAllowlist: vi.fn(),
     onDisableFilter: vi.fn(),
-    onDisableSafeBrowsing: vi.fn(),
-    onDisableParental: vi.fn(),
     onRemoveRewrite: vi.fn(),
     onEditRewrite: vi.fn(),
 };

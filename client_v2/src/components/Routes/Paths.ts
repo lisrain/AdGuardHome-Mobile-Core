@@ -6,11 +6,9 @@ const pathBuilder = (path: string) => `${BasicPath}${path}`;
 export const RoutePath = {
     Dashboard: 'Dashboard',
     Logs: 'Logs',
-    Guide: 'Guide',
     Dns: 'Dns',
     DnsPrivateReverse: 'DnsPrivateReverse',
     SettingsPage: 'SettingsPage',
-    Clients: 'Clients',
     DnsBlocklists: 'DnsBlocklists',
     DnsAllowlists: 'DnsAllowlists',
     DnsRewrites: 'DnsRewrites',
@@ -32,11 +30,9 @@ export const SCROLL_QUERY_KEY = 'section';
 export const Paths: Record<RoutePathKey, string> = {
     Dashboard: pathBuilder('dashboard'),
     Logs: pathBuilder('logs'),
-    Guide: pathBuilder('guide'),
     Dns: pathBuilder('dns'),
     DnsPrivateReverse: pathBuilder('dns/private-reverse'),
     SettingsPage: pathBuilder('settings'),
-    Clients: pathBuilder('clients'),
     DnsBlocklists: pathBuilder('blocklists'),
     DnsAllowlists: pathBuilder('allowlists'),
     DnsRewrites: pathBuilder('dns_rewrites'),

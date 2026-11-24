@@ -32,7 +32,6 @@ import { copy } from 'panel/__tests__/helpers/copy';
 import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from 'panel/helpers/localStorageHelper';
 import {
     getDnsStatus,
-    getClients,
     getVersion,
     refreshDnsStatus,
     changeTheme,
@@ -194,30 +193,6 @@ describe('refreshDnsStatus', () => {
         await refreshDnsStatus();
 
         expect(dashboardState.dnsAddresses).toEqual(['1.2.3.4']);
-    });
-});
-
-describe('getClients — clientsInitialized flag', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetStore(dashboardState, { clientsInitialized: false });
-    });
-
-    it('marks clientsInitialized after a successful request', async () => {
-        mocks.clientsStatus.mockResolvedValue({ clients: [], auto_clients: [] });
-
-        await getClients();
-
-        expect(dashboardState.clientsInitialized).toBe(true);
-    });
-
-    it('marks clientsInitialized after a failed request so the loader cannot get stuck', async () => {
-        mocks.clientsStatus.mockRejectedValue(new Error('network'));
-
-        await getClients();
-
-        expect(dashboardState.clientsInitialized).toBe(true);
-        expect(mocks.addErrorToast).toHaveBeenCalled();
     });
 });
 

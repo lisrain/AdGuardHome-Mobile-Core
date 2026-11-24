@@ -9,9 +9,8 @@ import {
 
 import theme from 'panel/lib/theme';
 import { PageLoader } from 'panel/common/ui/Loader';
-import { dashboardState, toggleProtection, getClients } from 'panel/stores/dashboard';
+import { dashboardState, toggleProtection } from 'panel/stores/dashboard';
 import { statsState, getStats, getStatsConfig, enableStatistics } from 'panel/stores/stats';
-import { accessState, getAccessList } from 'panel/stores/access';
 import { getStoredStatsPeriod, getClampedMaxInterval } from 'panel/helpers/statistics';
 import { LocalStorageHelper, LOCAL_STORAGE_KEYS } from 'panel/helpers/localStorageHelper';
 import { ONE_SECOND_IN_MS, DAY, STATS_INTERVALS_DAYS } from 'panel/helpers/constants';
@@ -94,8 +93,6 @@ export const Dashboard = () => {
     });
 
     onMount(() => {
-        getClients();
-        getAccessList();
         getStatsConfig();
     });
 
@@ -113,8 +110,6 @@ export const Dashboard = () => {
     });
 
     const handleRefreshStats = () => {
-        getClients();
-        getAccessList();
         getStatsConfig();
         getStats(selectedPeriod());
     };
@@ -133,8 +128,7 @@ export const Dashboard = () => {
         LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.STATS_PERIOD, period);
     };
 
-    const isLoading = () =>
-        statsState.processingStats || statsState.processingGetConfig || accessState.processing;
+    const isLoading = () => statsState.processingStats || statsState.processingGetConfig;
 
     // The page loader shows exactly once: until the first stats request
     // settles.  Later refetches keep the previous values painted, so the
@@ -167,12 +161,8 @@ export const Dashboard = () => {
                     <StatCards
                         numDnsQueries={statsState.numDnsQueries}
                         numBlockedFiltering={statsState.numBlockedFiltering}
-                        numReplacedSafebrowsing={statsState.numReplacedSafebrowsing}
-                        numReplacedParental={statsState.numReplacedParental}
                         dnsQueries={statsState.dnsQueries}
                         blockedFiltering={statsState.blockedFiltering}
-                        replacedSafebrowsing={statsState.replacedSafebrowsing}
-                        replacedParental={statsState.replacedParental}
                         timeUnits={statsState.timeUnits}
                     />
 
@@ -190,8 +180,6 @@ export const Dashboard = () => {
                             <GeneralStatistics
                                 numDnsQueries={statsState.numDnsQueries}
                                 numBlockedFiltering={statsState.numBlockedFiltering}
-                                numReplacedSafebrowsing={statsState.numReplacedSafebrowsing}
-                                numReplacedParental={statsState.numReplacedParental}
                                 avgProcessingTime={statsState.avgProcessingTime}
                             />
 

@@ -13,7 +13,6 @@ import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from 'panel/helpers/localStora
 
 import { Allowlists } from 'panel/components/FilterLists/Allowlists';
 import { DNSRewrites } from 'panel/components/FilterLists/DNSRewrites';
-import { SetupGuide } from 'panel/components/SetupGuide';
 import { Dashboard } from 'panel/components/Dashboard';
 import { QueryLog } from 'panel/components/QueryLog';
 import { Toasts } from 'panel/components/Toasts';
@@ -25,7 +24,6 @@ import s from './styles.module.pcss';
 import { DnsSettings } from '../DnsSettings';
 import { PrivateReverse } from '../DnsSettings/PrivateReverse';
 import { UserRules } from '../UserRules';
-import { Clients } from '../Clients/Clients';
 import { Paths } from '../Routes/Paths';
 import {
     TopQueriedDomainsPage,
@@ -33,8 +31,6 @@ import {
     TopUpstreamsPage,
     UpstreamAvgTimePage,
 } from '../Stats';
-
-const SetupGuideRoute = () => <SetupGuide />;
 
 const App = () => {
     onMount(() => {
@@ -130,9 +126,7 @@ const App = () => {
             <Route path={Paths.DnsAllowlists} component={Allowlists} />
             <Route path={Paths.CustomRules} component={UserRules} />
             <Route path={Paths.DnsRewrites} component={DNSRewrites} />
-            <Route path={Paths.Guide} component={SetupGuideRoute} />
             <Route path={Paths.Logs} component={QueryLog} />
-            <Route path={Paths.Clients} component={Clients} />
             <Route path="/" component={() => <Navigate href="/dashboard" />} />
         </HashRouter>
     );

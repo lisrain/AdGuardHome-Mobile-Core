@@ -11,7 +11,6 @@ import {
     toggleBlockingForClient,
     BLOCK_ACTIONS,
 } from 'panel/stores/filtering';
-import { initSettings, toggleSetting } from 'panel/stores/settings';
 import { updateRewrite, deleteRewrite, addRewrite, getRewritesList } from 'panel/stores/rewrites';
 import { addSuccessToast, createUndoToast } from 'panel/stores/toasts';
 import { openModal } from 'panel/stores/modals';
@@ -111,10 +110,6 @@ export const useUserRulesActions = (
         });
     };
 
-    const refreshSettings = async () => {
-        await initSettings();
-    };
-
     const handleRuleToggle = async (type: (typeof BLOCK_ACTIONS)[keyof typeof BLOCK_ACTIONS]) => {
         const result = params.checkResult();
         const lastCheck = params.lastSubmittedCheck();
@@ -151,24 +146,6 @@ export const useUserRulesActions = (
 
             await recheckCurrentTarget();
             return true;
-        });
-    };
-
-    const handleDisableSafeBrowsing = async () => {
-        await performWithUndo({
-            perform: () => toggleSetting('safebrowsing', true),
-            message: intl.getMessage('user_rules_browsing_security_disabled'),
-            undo: () => toggleSetting('safebrowsing', false),
-            refresh: refreshSettings,
-        });
-    };
-
-    const handleDisableParental = async () => {
-        await performWithUndo({
-            perform: () => toggleSetting('parental', true),
-            message: intl.getMessage('user_rules_parental_control_disabled'),
-            undo: () => toggleSetting('parental', false),
-            refresh: refreshSettings,
         });
     };
 
@@ -301,12 +278,6 @@ export const useUserRulesActions = (
                 break;
             case 'block':
                 await handleRuleToggle(BLOCK_ACTIONS.BLOCK);
-                break;
-            case 'disable-parental':
-                await handleDisableParental();
-                break;
-            case 'disable-safebrowsing':
-                await handleDisableSafeBrowsing();
                 break;
             case 'disable-filter':
                 await handleDisableFilter();

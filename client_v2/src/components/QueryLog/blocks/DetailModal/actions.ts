@@ -4,8 +4,6 @@ export type DetailModalActionId =
     | 'block'
     | 'add-to-allowlist'
     | 'disable-filter'
-    | 'disable-browsing-security'
-    | 'disable-parental'
     | 'remove-dns-rewrite'
     | 'edit-dns-rewrite';
 
@@ -30,9 +28,8 @@ export const getDetailModalActions = (
         case 'safe_search':
             return ['add-to-allowlist'];
         case 'blocked_threats':
-            return ['add-to-allowlist', 'disable-browsing-security'];
         case 'blocked_by_parental_control':
-            return ['add-to-allowlist', 'disable-parental'];
+            return ['add-to-allowlist'];
         case 'blocked_by_filter':
             return ctx.canDisableFilter
                 ? ['add-to-allowlist', 'disable-filter']

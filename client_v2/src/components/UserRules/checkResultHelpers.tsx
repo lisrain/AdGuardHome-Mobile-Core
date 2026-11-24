@@ -30,10 +30,6 @@ const getActionLabel = (action: ResultActionKind) => {
             return intl.getMessage('user_rules_add_to_allowlist');
         case 'block':
             return intl.getMessage('block');
-        case 'disable-parental':
-            return intl.getMessage('user_rules_disable_parental_control');
-        case 'disable-safebrowsing':
-            return intl.getMessage('user_rules_disable_browsing_security');
         case 'disable-filter':
             return intl.getMessage('user_rules_disable_filter');
         case 'edit-rewrite':
@@ -222,7 +218,7 @@ export const getCheckResultMeta = ({
                 tone: 'blocked',
                 title: intl.getMessage('user_rules_domain_blocked'),
                 reason: intl.getMessage('blocked_threats'),
-                actions: [createAction('allow'), createAction('disable-safebrowsing')],
+                actions: [createAction('allow')],
                 rules: rulesList,
                 ruleGroups,
                 source: intl.getMessage('safe_browsing'),
@@ -234,7 +230,7 @@ export const getCheckResultMeta = ({
                 reason: intl.getMessage('user_rules_reason_blocked_by', {
                     source: intl.getMessage('parental_control'),
                 }),
-                actions: [createAction('allow'), createAction('disable-parental')],
+                actions: [createAction('allow')],
                 rules: rulesList,
                 ruleGroups,
                 showRulesSection: false,

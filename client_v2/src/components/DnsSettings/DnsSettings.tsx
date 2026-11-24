@@ -1,20 +1,17 @@
 import { Show, onMount } from 'solid-js';
 
 import { dnsConfigState, getDnsConfig } from 'panel/stores/dnsConfig';
-import { accessState, getAccessList } from 'panel/stores/access';
 import intl from 'panel/common/intl';
 import cn from 'clsx';
 
 import { PageLoader } from 'panel/common/ui/Loader';
 import theme from 'panel/lib/theme';
 import { Upstream } from './Upstream';
-import { Access } from './Access';
 import { ServerConfig } from './ServerConfig';
 import { Cache } from './Cache';
 
 export const DnsSettings = () => {
     onMount(() => {
-        getAccessList();
         getDnsConfig();
     });
 
@@ -25,14 +22,10 @@ export const DnsSettings = () => {
                     {intl.getMessage('dns_settings')}
                 </h1>
 
-                <Show
-                    when={dnsConfigState.initialized && accessState.initialized}
-                    fallback={<PageLoader />}
-                >
+                <Show when={dnsConfigState.initialized} fallback={<PageLoader />}>
                     <Upstream />
                     <ServerConfig />
                     <Cache />
-                    <Access />
                 </Show>
             </div>
         </div>

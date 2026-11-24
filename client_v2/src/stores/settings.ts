@@ -1,134 +1,22 @@
 import { createStore } from 'solid-js/store';
 import { untrack } from 'solid-js';
-import {
-    safebrowsingStatus,
-    safebrowsingEnable,
-    safebrowsingDisable,
-    parentalStatus,
-    parentalEnable,
-    parentalDisable,
-    testUpstreamDNS,
-} from 'panel/api/generated';
-import { addErrorToast, addSuccessToast, createUndoToast } from './toasts';
+import { testUpstreamDNS } from 'panel/api/generated';
+import { addErrorToast, addSuccessToast } from './toasts';
 import { splitByNewLine } from 'panel/helpers/helpers';
 import intl from 'panel/common/intl';
 import type { UpstreamsConfig } from 'panel/api/model/upstreamsConfig';
 
 type SettingsState = {
-    processing: boolean;
-    initialized: boolean;
     processingTestUpstream: boolean;
-    processingDhcpStatus: boolean;
-    settingsList: {
-        parental: { enabled: boolean };
-        safebrowsing: { enabled: boolean };
-    };
 };
 
 const initialState: SettingsState = {
-    processing: true,
-    initialized: false,
     processingTestUpstream: false,
-    processingDhcpStatus: false,
-    settingsList: {
-        parental: { enabled: false },
-        safebrowsing: { enabled: false },
-    },
 };
 
 const [state, setState] = createStore<SettingsState>(initialState);
 
-export const initSettings = async () => {
-    setState('processing', true);
-    try {
-        const [safebrowsingStatusData, parentalStatusData] = await Promise.all([
-            safebrowsingStatus(),
-            parentalStatus(),
-        ]);
-        setState({
-            settingsList: {
-                safebrowsing: { enabled: safebrowsingStatusData.enabled },
-                parental: { enabled: parentalStatusData.enabled },
-            },
-            processing: false,
-            initialized: true,
-        });
-    } catch (error) {
-        addErrorToast({ error });
-        setState({ processing: false, initialized: true });
-    }
-};
-
-export async function toggleSetting(
-    settingKey: 'safebrowsing' | 'parental',
-    status: boolean,
-): Promise<boolean> {
-    try {
-        switch (settingKey) {
-            case 'safebrowsing':
-                if (status) {
-                    await safebrowsingDisable();
-                } else {
-                    await safebrowsingEnable();
-                }
-                setState('settingsList', 'safebrowsing', 'enabled', !status);
-                return true;
-            case 'parental':
-                if (status) {
-                    await parentalDisable();
-                } else {
-                    await parentalEnable();
-                }
-                setState('settingsList', 'parental', 'enabled', !status);
-                return true;
-            default:
-                return false;
-        }
-    } catch (error) {
-        addErrorToast({ error });
-        return false;
-    }
-}
-
 export const settingsState = untrack(() => state);
-
-const disableWithUndo = async (
-    disable: () => Promise<void>,
-    enable: () => Promise<void>,
-    setEnabled: (enabled: boolean) => void,
-    message: string,
-): Promise<boolean> => {
-    try {
-        await disable();
-        setEnabled(false);
-        addSuccessToast(
-            createUndoToast(message, intl.getMessage('notify_undo'), async () => {
-                await enable();
-                setEnabled(true);
-            }),
-        );
-        return true;
-    } catch (error) {
-        addErrorToast({ error });
-        return false;
-    }
-};
-
-export const disableSafeBrowsing = () =>
-    disableWithUndo(
-        safebrowsingDisable,
-        safebrowsingEnable,
-        (enabled) => setState('settingsList', 'safebrowsing', 'enabled', enabled),
-        intl.getMessage('user_rules_browsing_security_disabled'),
-    );
-
-export const disableParental = () =>
-    disableWithUndo(
-        parentalDisable,
-        parentalEnable,
-        (enabled) => setState('settingsList', 'parental', 'enabled', enabled),
-        intl.getMessage('user_rules_parental_control_disabled'),
-    );
 
 export const testUpstreamWithFormValues = async (
     formValues: {

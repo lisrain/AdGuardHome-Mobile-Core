@@ -39,8 +39,6 @@ type Props = {
     onBlock: (domain: string) => void;
     onAddToAllowlist: (domain: string) => void;
     onDisableFilter: (filter: Filter) => void;
-    onDisableSafeBrowsing: () => void;
-    onDisableParental: () => void;
     onRemoveRewrite: (rewrite: RewriteEntry) => void;
     onEditRewrite: (rewrite: RewriteEntry) => void;
 };
@@ -470,8 +468,6 @@ export const DetailModal = (props: Props) => {
                     onBlock={props.onBlock}
                     onAddToAllowlist={props.onAddToAllowlist}
                     onDisableFilter={props.onDisableFilter}
-                    onDisableSafeBrowsing={props.onDisableSafeBrowsing}
-                    onDisableParental={props.onDisableParental}
                     onRemoveRewrite={props.onRemoveRewrite}
                     onEditRewrite={props.onEditRewrite}
                 />

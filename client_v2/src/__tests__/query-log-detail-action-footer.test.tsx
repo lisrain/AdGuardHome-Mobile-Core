@@ -44,8 +44,6 @@ const defaultProps: ComponentProps<typeof ActionFooter> = {
     onBlock: vi.fn(),
     onAddToAllowlist: vi.fn(),
     onDisableFilter: vi.fn(),
-    onDisableSafeBrowsing: vi.fn(),
-    onDisableParental: vi.fn(),
     onRemoveRewrite: vi.fn(),
     onEditRewrite: vi.fn(),
 };
@@ -130,22 +128,6 @@ describe('ActionFooter', () => {
         expect(screen.getByTestId('query-log-detail-action-allowlist').className).not.toContain(
             'onCard',
         );
-    });
-
-    it('blocked threat → Disable browsing security calls onDisableSafeBrowsing and onClose', () => {
-        const props = { ...defaultProps, entry: makeEntry({ reason: 'FilteredSafeBrowsing' }) };
-        render(() => <ActionFooter {...props} />);
-        fireEvent.click(screen.getByTestId('query-log-detail-action-disable-browsing-security'));
-        expect(props.onDisableSafeBrowsing).toHaveBeenCalled();
-        expect(props.onClose).toHaveBeenCalled();
-    });
-
-    it('parental control → Disable parental calls onDisableParental and onClose', () => {
-        const props = { ...defaultProps, entry: makeEntry({ reason: 'FilteredParental' }) };
-        render(() => <ActionFooter {...props} />);
-        fireEvent.click(screen.getByTestId('query-log-detail-action-disable-parental'));
-        expect(props.onDisableParental).toHaveBeenCalled();
-        expect(props.onClose).toHaveBeenCalled();
     });
 
     it('dns rewrite → Remove + Edit buttons; clicking Edit passes the matched rewrite rule', () => {

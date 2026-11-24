@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
     getStatsConfig: vi.fn(),
     putStatsConfig: vi.fn(),
     statsReset: vi.fn(),
-    clientsSearch: vi.fn(),
     addErrorToast: vi.fn(),
     addSuccessToast: vi.fn(),
 }));
@@ -15,7 +14,6 @@ vi.mock('panel/api/generated', () => ({
     getStatsConfig: mocks.getStatsConfig,
     putStatsConfig: mocks.putStatsConfig,
     statsReset: mocks.statsReset,
-    clientsSearch: mocks.clientsSearch,
 }));
 vi.mock('panel/stores/toasts', () => ({
     addErrorToast: mocks.addErrorToast,
@@ -32,7 +30,6 @@ import { getStats, getStatsConfig, statsState } from 'panel/stores/stats';
 describe('getStats', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.clientsSearch.mockResolvedValue([]);
         mocks.stats.mockResolvedValue({});
     });
 
@@ -60,26 +57,6 @@ describe('getStats', () => {
         await getStats();
         expect(statsState.statsInitialized).toBe(true);
         expect(mocks.addErrorToast).toHaveBeenCalled();
-    });
-
-    it('enriches top clients and stores normalizedTopClients', async () => {
-        mocks.stats.mockResolvedValue({
-            top_clients: [{ '1.2.3.4': 5 }],
-            avg_processing_time: 0.012,
-            top_blocked_domains: [],
-            top_queried_domains: [],
-            top_upstreams_avg_time: [],
-            top_upstreams_responses: [],
-        });
-
-        await getStats();
-
-        // searchClients was called with discovered client ids
-        expect(mocks.clientsSearch).toHaveBeenCalledWith({
-            clients: [{ id: '1.2.3.4' }],
-        });
-        // normalizedTopClients is populated (configured bucket carries info name)
-        expect(Object.keys(statsState.normalizedTopClients.auto)).toContain('1.2.3.4');
     });
 
     it('converts avg_processing_time to milliseconds, falsy passthrough', async () => {

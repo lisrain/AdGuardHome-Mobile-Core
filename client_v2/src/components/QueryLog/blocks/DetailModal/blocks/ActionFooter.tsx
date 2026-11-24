@@ -19,8 +19,6 @@ type Props = {
     onBlock: (domain: string) => void;
     onAddToAllowlist: (domain: string) => void;
     onDisableFilter: (filter: Filter) => void;
-    onDisableSafeBrowsing: () => void;
-    onDisableParental: () => void;
     onRemoveRewrite: (rewrite: RewriteEntry) => void;
     onEditRewrite: (rewrite: RewriteEntry) => void;
 };
@@ -57,16 +55,6 @@ export const ActionFooter = (props: Props) => {
         const filter = filterToDisable();
         if (!filter) return;
         props.onDisableFilter(filter);
-        props.onClose();
-    };
-
-    const handleDisableSafeBrowsing = () => {
-        props.onDisableSafeBrowsing();
-        props.onClose();
-    };
-
-    const handleDisableParental = () => {
-        props.onDisableParental();
         props.onClose();
     };
 
@@ -115,20 +103,6 @@ export const ActionFooter = (props: Props) => {
             dataAction: 'disable-filter',
             label: () => intl.getMessage('user_rules_disable_filter'),
             onClick: handleDisableFilter,
-        },
-        'disable-browsing-security': {
-            variant: 'secondary',
-            testId: 'query-log-detail-action-disable-browsing-security',
-            dataAction: 'disable-browsing-security',
-            label: () => intl.getMessage('user_rules_disable_browsing_security'),
-            onClick: handleDisableSafeBrowsing,
-        },
-        'disable-parental': {
-            variant: 'secondary',
-            testId: 'query-log-detail-action-disable-parental',
-            dataAction: 'disable-parental',
-            label: () => intl.getMessage('user_rules_disable_parental_control'),
-            onClick: handleDisableParental,
         },
         'remove-dns-rewrite': {
             variant: 'primary',

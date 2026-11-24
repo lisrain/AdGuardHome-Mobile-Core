@@ -8,29 +8,22 @@ import {
     getVersionJson,
     beginUpdate,
     setProtection,
-    clientsStatus,
     getProfile,
     updateProfile,
 } from 'panel/api/generated';
 import { customFetch } from 'panel/api/customFetch';
 import type { ServerStatus } from 'panel/api/model/serverStatus';
 import type { VersionInfo } from 'panel/api/model/versionInfo';
-import type { Clients } from 'panel/api/model/clients';
 import type { ProfileInfo } from 'panel/api/model/profileInfo';
 import type { Lang } from 'panel/api/model/lang';
 import intl from 'panel/common/intl';
 import { addErrorToast, addSuccessToast, addNoticeToast } from './toasts';
 import { getUpdateFailedMessage } from './dashboard/noticeOptions';
-import type { Client, AutoClient } from 'panel/initialState';
-import type { Client as ClientModel } from 'panel/api/model/client';
-import type { ClientAuto } from 'panel/api/model/clientAuto';
 
 type DashboardState = {
     processing: boolean;
     isCoreRunning: boolean;
     processingVersion: boolean;
-    processingClients: boolean;
-    clientsInitialized: boolean;
     processingUpdate: boolean;
     processingProfile: boolean;
     protectionEnabled: boolean;
@@ -41,9 +34,6 @@ type DashboardState = {
     dnsPort: number;
     dnsAddresses: string[];
     dnsVersion: string;
-    clients: Client[];
-    autoClients: AutoClient[];
-    supportedTags: string[];
     name: string;
     theme: string | undefined;
     checkUpdateFlag: boolean;
@@ -59,8 +49,6 @@ const initialState: DashboardState = {
     processing: true,
     isCoreRunning: true,
     processingVersion: true,
-    processingClients: true,
-    clientsInitialized: false,
     processingUpdate: false,
     processingProfile: true,
     protectionEnabled: false,
@@ -71,9 +59,6 @@ const initialState: DashboardState = {
     dnsPort: STANDARD_DNS_PORT,
     dnsAddresses: [],
     dnsVersion: '',
-    clients: [],
-    autoClients: [],
-    supportedTags: [],
     name: '',
     theme: undefined,
     checkUpdateFlag: false,
@@ -308,32 +293,6 @@ export const toggleProtection = async (time: number | null = null) => {
 
 export const setDisableDurationTime = (timeToEnableProtection: number) => {
     setState('protectionDisabledDuration', timeToEnableProtection);
-};
-
-const sortClients = (clients: (ClientModel | ClientAuto)[]) => {
-    if (!Array.isArray(clients)) return [];
-    return [...clients].sort((a, b) => {
-        const nameA = (a.name || ('ip' in a ? a.ip : '') || '').toString().toLowerCase();
-        const nameB = (b.name || ('ip' in b ? b.ip : '') || '').toString().toLowerCase();
-        return nameA.localeCompare(nameB);
-    });
-};
-
-export const getClients = async () => {
-    setState('processingClients', true);
-    try {
-        const data: Clients = await clientsStatus();
-        setState({
-            clients: sortClients(data.clients || []),
-            autoClients: sortClients(data.auto_clients || []),
-            supportedTags: data.supported_tags || [],
-            processingClients: false,
-            clientsInitialized: true,
-        });
-    } catch (error) {
-        addErrorToast({ error });
-        setState({ processingClients: false, clientsInitialized: true });
-    }
 };
 
 /**

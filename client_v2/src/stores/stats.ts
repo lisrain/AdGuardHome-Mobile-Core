@@ -5,21 +5,13 @@ import {
     getStatsConfig as fetchStatsConfig,
     putStatsConfig,
     statsReset,
-    clientsSearch,
 } from 'panel/api/generated';
 import { addErrorToast, addSuccessToast } from './toasts';
 import intl from 'panel/common/intl';
 import { DAY, HOUR, STATS_INTERVALS_DAYS, TIME_UNITS } from 'panel/helpers/constants';
 import { clampStatsPeriod } from 'panel/helpers/statistics';
-import {
-    normalizeTopStats,
-    normalizeTopClients,
-    addClientInfo,
-    getParamsForClientsSearch,
-    secondsToMilliseconds,
-} from 'panel/helpers/helpers';
+import { normalizeTopStats, secondsToMilliseconds } from 'panel/helpers/helpers';
 import type { GetStatsConfigResponse } from 'panel/api/model/getStatsConfigResponse';
-import type { ClientFindSubEntry } from 'panel/api/model/clientFindSubEntry';
 
 type StatsState = {
     processingGetConfig: boolean;
@@ -34,20 +26,10 @@ type StatsState = {
     customInterval: number | null;
     dnsQueries: number[];
     blockedFiltering: number[];
-    replacedParental: number[];
-    replacedSafebrowsing: number[];
     topBlockedDomains: { name: string; count: number }[];
-    topClients: { name: string; count: number; info: ClientFindSubEntry }[];
-    normalizedTopClients: {
-        auto: Record<string, number>;
-        configured: Record<string, number>;
-    };
     topQueriedDomains: { name: string; count: number }[];
     numBlockedFiltering: number;
     numDnsQueries: number;
-    numReplacedParental: number;
-    numReplacedSafebrowsing: number;
-    numReplacedSafesearch: number;
     avgProcessingTime: number;
     timeUnits: string;
     enabled: boolean;
@@ -69,17 +51,10 @@ const initialState: StatsState = {
     customInterval: null,
     dnsQueries: [],
     blockedFiltering: [],
-    replacedParental: [],
-    replacedSafebrowsing: [],
     topBlockedDomains: [],
-    topClients: [],
-    normalizedTopClients: { auto: {}, configured: {} },
     topQueriedDomains: [],
     numBlockedFiltering: 0,
     numDnsQueries: 0,
-    numReplacedParental: 0,
-    numReplacedSafebrowsing: 0,
-    numReplacedSafesearch: 0,
     avgProcessingTime: 0,
     timeUnits: TIME_UNITS?.HOURS || 'hours',
     enabled: true,
@@ -99,25 +74,13 @@ export const getStats = async (period?: number) => {
             period != null ? { recent: clampStatsPeriod(period, state.interval) } : undefined,
         );
 
-        const normalizedTopClientsList = normalizeTopStats(data.top_clients || []);
-        const clientsParams = getParamsForClientsSearch(normalizedTopClientsList, 'name');
-        const clients = await clientsSearch(clientsParams);
-        const topClientsWithInfo = addClientInfo(normalizedTopClientsList, clients, 'name');
-
         setState({
             dnsQueries: data.dns_queries || [],
             blockedFiltering: data.blocked_filtering || [],
-            replacedParental: data.replaced_parental || [],
-            replacedSafebrowsing: data.replaced_safebrowsing || [],
             topBlockedDomains: normalizeTopStats(data.top_blocked_domains || []),
-            topClients: topClientsWithInfo,
-            normalizedTopClients: normalizeTopClients(topClientsWithInfo),
             topQueriedDomains: normalizeTopStats(data.top_queried_domains || []),
             numBlockedFiltering: data.num_blocked_filtering || 0,
             numDnsQueries: data.num_dns_queries || 0,
-            numReplacedParental: data.num_replaced_parental || 0,
-            numReplacedSafebrowsing: data.num_replaced_safebrowsing || 0,
-            numReplacedSafesearch: data.num_replaced_safesearch || 0,
             avgProcessingTime: secondsToMilliseconds(data.avg_processing_time),
             timeUnits: data.time_units || initialState.timeUnits,
             topUpstreamsAvgTime: normalizeTopStats(data.top_upstreams_avg_time || []).map(
