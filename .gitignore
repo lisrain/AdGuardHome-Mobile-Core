@@ -19,10 +19,6 @@
 /agh-backup/
 /bin/
 /build/*
-/client/blob-report/
-/client/playwright-report/
-/client/playwright/.cache/
-/client/test-results/
 /client_v2/.env.local
 /client_v2/blob-report/
 /client_v2/playwright-report/

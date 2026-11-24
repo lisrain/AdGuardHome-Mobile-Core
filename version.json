@@ -1,6 +1,6 @@
 {
-  "new_version": "v1.0.0-b.2-mobile.20261115",
+  "new_version": "v1.0.0-mobile.20261124",
   "announcement": "",
   "announcement_url": "",
-  "download_linux_arm64": "https://github.com/lisrain/AdGuardHome-Mobile-Core/releases/download/v1.0.0-b.2-mobile.20261115/AdGuardHome_linux_arm64.tar.gz"
+  "download_linux_arm64": "https://github.com/lisrain/AdGuardHome-Mobile-Core/releases/download/v1.0.0-mobile.20261124/AdGuardHome_linux_arm64.tar.gz"
 }
