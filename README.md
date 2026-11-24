@@ -26,7 +26,7 @@ DNS 代理、过滤规则、查询日志和统计能力，移除在手机上用�
 - 查询日志：保留命中规则、过滤器、处理耗时等信息，便于排查误杀
 - 统计：查询数、拦截数、域名排行、上游排行、平均处理耗时
 - 客户端识别（内部容器）：用于来源识别和自定义规则中的客户端匹配，
-  管理面板中保留只读的客户端列表与查询
+  不提供客户端页面
 - 安装向导、登录页、普通 HTTP 管理面板（新版 SolidJS 界面）
 
 ## 已删除的功能
@@ -37,8 +37,11 @@ DNS 代理、过滤规则、查询日志和统计能力，移除在手机上用�
 | 安全搜索 | 含各搜索引擎规则文件、HTTP API、客户端字段 |
 | 已阻止的服务 | 含服务清单、服务图标接口、客户端与统计字段 |
 | 加密 | TLS / DoT / DoQ / DoH 服务端、HTTPS 面板、证书管理、Apple 描述文件 |
-| 客户端设置 | 客户端添加/编辑/删除接口与页面，仅保留只读客户端列表 |
+| 客户端设置与页面 | 客户端添加/编辑/删除接口、只读列表页面与菜单入口 |
 | 客户端排行 | 统计与仪表盘中的 Top Clients |
+| 安全浏览 / 家长控制 | 设置页开关、仪表盘与统计中的对应卡片 |
+| DNS 访问设置 | 允许/禁止客户端与域名页面，仅保留配置字段 |
+| 设置指南 | 管理面板中的设备配置指南页面与菜单入口 |
 | 系统服务安装 | systemd / launchd / Windows service 相关代码 |
 | 非 Linux 平台 | 仅构建 linux/amd64 与 linux/arm64 |
 | 其它构建 | Docker、Snapcraft、未完成的 next API、旧版 React 界面（`client/`） |
@@ -100,25 +103,27 @@ Magisk / KernelSU / APatch 模块，或由任意启动脚本拉起：
 
 ## 兼容性说明
 
-- 旧版 `AdGuardHome.yaml` 中的 `dhcp`、`tls`、`safe_search`、
-  `blocked_services` 等键会被忽略，并在内核写回配置时自动丢弃。
+- 旧版 `AdGuardHome.yaml` 中的 `tls`、`safe_search`、`blocked_services` 等键会被
+  忽略，并在内核写回配置时自动丢弃；`dhcp` 段为了兼容旧配置仍会保留，但不再生效。
 - 配置 `schema_version` 保持与上游一致，`configmigrate` 的历史迁移全部保留。
 - 查询日志与统计的 `reason` / `result` 编号沿用上游，旧日志与旧统计文件仍可读取。
 - 语言仅保留 English、简体中文、繁體中文；旧配置中其它语言会被重置为自动检测。
-- 客户端只读：保留 `GET /control/clients` 与仅供界面查询的
-  `POST /control/clients/search`，不提供添加、修改和删除。
-- 更新检查暂未启用；`internal/updater` 保留了代码，可通过 `AGH_UPDATE_URL`
-  指向自定义 `version.json`，后续再完善。
+- 客户端只读：保留 `GET /control/clients` 与 `POST /control/clients/search` 两个
+  只读接口供识别使用，不提供添加、修改和删除。
+- 更新检查默认读取本仓库 `master` 分支的 `version.json`（格式与上游一致：
+  `version` / `announcement` / `announcement_url` / `download_linux_*`），
+  也可以用 `AGH_UPDATE_URL` 覆盖。
 
 ## 已知限制
 
 - 不提供 TLS、DoH、DoT、DoQ 服务端，也不支持 HTTPS 管理面板。
 - 不提供 DHCP 服务。
-- 不提供客户端级别的设置与拦截服务配置，仅保留只读客户端识别。
+- 不提供客户端页面与客户端级别的设置，仅保留内部识别。
 - 只支持 linux/amd64 与 linux/arm64，其它平台不再维护。
 - 前端为新版 SolidJS 界面（`client_v2`），已按本分支功能裁剪：设置中不再有
-  「协议」和「DHCP」，过滤器菜单不再有「已阻止的服务」，统计中没有
-  Top Clients 页面。
+  「协议」「DHCP」和客户端入口，DNS 设置中没有「访问设置」，常规设置中没有
+  安全浏览/家长控制开关，过滤器菜单不再有「已阻止的服务」，也没有
+  Top Clients、设置指南页面。
 
 ## 许可与致谢
 
@@ -131,10 +136,11 @@ Magisk / KernelSU / APatch 模块，或由任意启动脚本拉起：
 This is an unofficial, opinionated fork of AdGuard Home for Android root
 environments, based on upstream v1.0.0. It keeps DNS serving, filtering, query
 logging, statistics and client identification, and removes DHCP, SafeSearch,
-blocked services, TLS/DoH/DoT/DoQ, client settings, top clients, system service
-integration and non-Linux platforms. The UI is the SolidJS `client_v2` frontend
-introduced in v1.0.0, trimmed to the features above; only English, Simplified
-Chinese and Traditional Chinese locales are bundled. Only linux/amd64 and
-linux/arm64 are supported. The upstream README is kept as
+blocked services, TLS/DoH/DoT/DoQ, client settings and pages, DNS access
+settings, Safe Browsing/Parental Control toggles, top clients, the setup guide,
+system service integration and non-Linux platforms. The UI is the SolidJS
+`client_v2` frontend introduced in v1.0.0, trimmed to the features above; only
+English, Simplified Chinese and Traditional Chinese locales are bundled. Only
+linux/amd64 and linux/arm64 are supported. The upstream README is kept as
 [README_upstream.md](README_upstream.md). This fork is not affiliated with or
 endorsed by the AdGuard team.
