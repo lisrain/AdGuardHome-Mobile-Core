@@ -432,9 +432,10 @@ func (clients *clientsContainer) findRuntime(
 	}
 }
 
-// registerWebHandlers registers HTTP handlers.  Only the read-only endpoint is
-// kept: client settings are disabled in this mobile-oriented build, but the
-// client list is still needed by custom rules.
+// registerWebHandlers registers HTTP handlers.  Only the read-only endpoints
+// are kept: client settings are disabled in this mobile-oriented build, but the
+// client list and lookups are still needed by custom rules and by the web UI.
 func (clients *clientsContainer) registerWebHandlers() {
 	clients.httpReg.Register(http.MethodGet, "/control/clients", clients.handleGetClients)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/search", clients.handleSearchClient)
 }
