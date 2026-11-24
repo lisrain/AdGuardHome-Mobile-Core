@@ -6,7 +6,9 @@ import { defineConfig } from 'vitest/config';
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-    plugins: [solid()],
+    // Disable the solid-refresh HMR transform: under vitest its runtime URL
+    // cannot be resolved on Windows and every component test fails to load.
+    plugins: [solid({ hot: false })],
     resolve: {
         conditions: ['development', 'browser'],
         // Force Vite to use a single solid-js instance across all deps,

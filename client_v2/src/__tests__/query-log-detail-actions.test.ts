@@ -7,7 +7,6 @@ import {
 const ctx = (
     overrides: Partial<DetailModalActionContext> = {},
 ): DetailModalActionContext => ({
-    hasServiceId: false,
     canDisableFilter: false,
     hasRewriteRule: false,
     ...overrides,
@@ -46,13 +45,7 @@ describe('getDetailModalActions', () => {
         ]);
     });
 
-    it('blocked service → Add to allowlist + Allow service when service id present', () => {
-        expect(
-            getDetailModalActions('blocked_services', ctx({ hasServiceId: true })),
-        ).toEqual(['add-to-allowlist', 'allow-service']);
-    });
-
-    it('blocked service → Add to allowlist only when service id missing', () => {
+    it('blocked service → Add to allowlist only', () => {
         expect(getDetailModalActions('blocked_services', ctx())).toEqual([
             'add-to-allowlist',
         ]);
@@ -71,11 +64,8 @@ describe('getDetailModalActions', () => {
         );
     });
 
-    it('safe search → Add to allowlist + Disable Safe search', () => {
-        expect(getDetailModalActions('safe_search', ctx())).toEqual([
-            'add-to-allowlist',
-            'disable-safe-search',
-        ]);
+    it('safe search → Add to allowlist only', () => {
+        expect(getDetailModalActions('safe_search', ctx())).toEqual(['add-to-allowlist']);
     });
 
     it('dns rewrites → Remove + Edit DNS rewrite when rule found', () => {

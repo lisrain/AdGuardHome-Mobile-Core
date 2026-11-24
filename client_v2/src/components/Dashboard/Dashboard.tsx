@@ -20,7 +20,6 @@ import { Header, getPeriodLabel } from './blocks/Header/Header';
 import { StatCards } from './blocks/StatCards';
 import { EmptyState } from './blocks/EmptyState/EmptyState';
 import { GeneralStatistics } from './blocks/GeneralStatistics';
-import { TopClients } from './blocks/TopClients';
 import { TopQueriedDomains } from './blocks/TopQueriedDomains';
 import { TopBlockedDomains } from './blocks/TopBlockedDomains';
 import { TopUpstreams } from './blocks/TopUpstreams';
@@ -193,14 +192,7 @@ export const Dashboard = () => {
                                 numBlockedFiltering={statsState.numBlockedFiltering}
                                 numReplacedSafebrowsing={statsState.numReplacedSafebrowsing}
                                 numReplacedParental={statsState.numReplacedParental}
-                                numReplacedSafesearch={statsState.numReplacedSafesearch}
                                 avgProcessingTime={statsState.avgProcessingTime}
-                            />
-
-                            <TopClients
-                                topClients={statsState.topClients}
-                                numDnsQueries={statsState.numDnsQueries}
-                                period={effectivePeriod()}
                             />
 
                             <TopQueriedDomains

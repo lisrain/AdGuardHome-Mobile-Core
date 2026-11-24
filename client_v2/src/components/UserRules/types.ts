@@ -29,8 +29,6 @@ export type ResultActionKind =
     | 'block'
     | 'disable-parental'
     | 'disable-safebrowsing'
-    | 'disable-safesearch'
-    | 'disable-blocked-service'
     | 'disable-filter'
     | 'edit-rewrite'
     | 'delete-rewrite'

@@ -29,12 +29,12 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: client_v2/package-lock.json
 
       - name: Build frontend
         run: |
           set -euo pipefail
-          cd client
+          cd client_v2
           npm ci
           npm run build-prod
 

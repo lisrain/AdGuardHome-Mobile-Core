@@ -20,7 +20,6 @@ import type { ProfileInfo } from 'panel/api/model/profileInfo';
 import type { Lang } from 'panel/api/model/lang';
 import intl from 'panel/common/intl';
 import { addErrorToast, addSuccessToast, addNoticeToast } from './toasts';
-import { getTlsStatus } from './encryption';
 import { getUpdateFailedMessage } from './dashboard/noticeOptions';
 import type { Client, AutoClient } from 'panel/initialState';
 import type { Client as ClientModel } from 'panel/api/model/client';
@@ -165,7 +164,6 @@ export const getDnsStatus = async () => {
                 httpPort: dnsStatus.http_port,
             });
             getVersion();
-            getTlsStatus();
             // The store wrapper, not the raw API call: it saves name and theme.
             getProfileData();
         } else {
@@ -182,8 +180,8 @@ export const getDnsStatus = async () => {
 
 /**
  * Refreshes the DNS addresses and ports without touching `processing`, the
- * version, TLS status, or the profile, and keeps the previous values on
- * failure.  Used after settings that change the addresses, e.g. encryption.
+ * version, or the profile, and keeps the previous values on failure.  Used
+ * after settings that change the addresses.
  */
 export const refreshDnsStatus = async (): Promise<void> => {
     try {

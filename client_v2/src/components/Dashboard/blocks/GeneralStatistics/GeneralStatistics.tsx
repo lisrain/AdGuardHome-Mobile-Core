@@ -15,7 +15,6 @@ type Props = {
     numBlockedFiltering: number;
     numReplacedSafebrowsing: number;
     numReplacedParental: number;
-    numReplacedSafesearch: number;
     avgProcessingTime: number;
 };
 
@@ -26,8 +25,6 @@ export const GeneralStatistics = (props: Props) => {
         props.numDnsQueries > 0 ? (props.numReplacedSafebrowsing / props.numDnsQueries) * 100 : 0;
     const parentalPercent = () =>
         props.numDnsQueries > 0 ? (props.numReplacedParental / props.numDnsQueries) * 100 : 0;
-    const safesearchPercent = () =>
-        props.numDnsQueries > 0 ? (props.numReplacedSafesearch / props.numDnsQueries) * 100 : 0;
 
     const hasStats = () => props.numDnsQueries > 0;
 
@@ -90,20 +87,6 @@ export const GeneralStatistics = (props: Props) => {
                         query={{
                             status: QUERY_LOG_STATUS_FILTER.BLOCKED.QUERY,
                             reason: QUERY_LOG_REASON_FILTER.BLOCKED_BY_PARENTAL_CONTROL.QUERY,
-                        }}
-                    />
-
-                    <StatRow
-                        label={intl.getMessage('safe_search_used')}
-                        value={props.numReplacedSafesearch}
-                        percent={safesearchPercent()}
-                        icon="search"
-                        rowTheme="safeSearchUsed"
-                        tooltip={intl.getMessage('safe_search_used_tooltip')}
-                        linkTo={RoutePath.QueryLog}
-                        query={{
-                            status: QUERY_LOG_STATUS_FILTER.REWRITTEN.QUERY,
-                            reason: QUERY_LOG_REASON_FILTER.SAFE_SEARCH.QUERY,
                         }}
                     />
 

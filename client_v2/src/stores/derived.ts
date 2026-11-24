@@ -25,12 +25,6 @@ export const safebrowsingPercentage = createMemo(() => {
     return Math.round((numReplacedSafebrowsing / numDnsQueries) * 100);
 });
 
-export const safesearchPercentage = createMemo(() => {
-    const { numDnsQueries, numReplacedSafesearch } = statsState;
-    if (!numDnsQueries) return 0;
-    return Math.round((numReplacedSafesearch / numDnsQueries) * 100);
-});
-
 export const isProtectionActive = createMemo(() => {
     return dashboardState.protectionEnabled && dashboardState.isCoreRunning;
 });

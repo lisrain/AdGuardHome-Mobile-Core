@@ -5,9 +5,6 @@ import intl from 'panel/common/intl';
 import { addSuccessToast } from 'panel/stores/toasts';
 import { filteringState, checkHost, getFilteringStatus, setRules } from 'panel/stores/filtering';
 import { settingsState, initSettings } from 'panel/stores/settings';
-import { dashboardState, getClients } from 'panel/stores/dashboard';
-import { clientsState } from 'panel/stores/clients';
-import { servicesState, getBlockedServices, getAllBlockedServices } from 'panel/stores/services';
 import { rewritesState, getRewritesList } from 'panel/stores/rewrites';
 import { MODAL_TYPE } from 'panel/helpers/constants';
 import theme from 'panel/lib/theme';
@@ -41,10 +38,8 @@ export const UserRules = () => {
         () =>
             filteringState.processingRules ||
             filteringState.processingCheck ||
-            clientsState.processingUpdating ||
             rewritesState.processingDelete ||
-            rewritesState.processingUpdate ||
-            servicesState.processingSet,
+            rewritesState.processingUpdate,
     );
 
     // The page loader shows exactly once: until every store this page reads has
@@ -54,17 +49,13 @@ export const UserRules = () => {
         () =>
             !filteringState.filtersInitialized ||
             !settingsState.initialized ||
-            !dashboardState.clientsInitialized ||
-            !rewritesState.initialized ||
-            !servicesState.initialized ||
-            !servicesState.allInitialized,
+            !rewritesState.initialized,
     );
 
     const {
         currentRewrite,
         setCurrentRewrite,
         matchedRewrite,
-        hiddenActionKinds,
         handleAction,
         handleRewriteUpdate,
         handleRewriteDelete,
@@ -73,9 +64,6 @@ export const UserRules = () => {
         resetCurrentRewrite,
     } = useUserRulesActions({
         checkResult: () => filteringState.check as CheckResultData,
-        filteringEnabled: () => filteringState.enabled,
-        settingsList: () => settingsState.settingsList,
-        persistentClients: () => dashboardState.clients || [],
         rewritesList: () => rewritesState.list,
         lastSubmittedCheck,
         setIsResultVisible,
@@ -84,10 +72,7 @@ export const UserRules = () => {
     onMount(() => {
         getFilteringStatus();
         initSettings();
-        getClients();
         getRewritesList();
-        getBlockedServices();
-        getAllBlockedServices();
     });
 
     createEffect(() => {
@@ -200,7 +185,6 @@ export const UserRules = () => {
                                 onEditRewrite={openEditRewriteModal}
                                 onDeleteRewrite={openDeleteRewriteModal}
                                 hasMatchedRewrite={Boolean(matchedRewrite())}
-                                hiddenActionKinds={hiddenActionKinds()}
                             />
                         </Show>
                     </div>

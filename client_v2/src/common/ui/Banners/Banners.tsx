@@ -1,15 +1,13 @@
 import { Show, createMemo, createSignal, type JSX } from 'solid-js';
-import { useNavigate, useSearchParams } from '@solidjs/router';
+import { useSearchParams } from '@solidjs/router';
 
 import { Banner } from 'panel/common/ui/Banner';
 import { Button } from 'panel/common/ui/Button';
 import { MANUAL_UPDATE_LINK } from 'panel/helpers/constants';
-import { RoutePath, TLS_WIZARD_QUERY_KEY, linkPathBuilder } from 'panel/components/Routes/Paths';
 import intl from 'panel/common/intl';
 import theme from 'panel/lib/theme';
 
 import { dashboardState, getUpdate } from 'panel/stores/dashboard';
-import { encryptionState } from 'panel/stores/encryption';
 import {
     type BannerSpec,
     type BannerType,
@@ -19,14 +17,11 @@ import {
 
 import s from './Banners.module.pcss';
 
-const TLS_EXPIRY_WARNING_MS = 30 * 24 * 60 * 60 * 1000;
-
 type Props = {
     forceBanner?: BannerSpec;
 };
 
 export const Banners = (props: Props) => {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams<{ forceBanner?: string }>();
     const [dismissed, setDismissed] = createSignal<BannerSpec | null>(null);
 
@@ -39,18 +34,6 @@ export const Banners = (props: Props) => {
     });
 
     const computeActiveBanner = (): BannerSpec | null => {
-        if (encryptionState.enabled && encryptionState.valid_cert && encryptionState.not_after) {
-            const expiry = new Date(encryptionState.not_after).getTime();
-            if (!Number.isNaN(expiry)) {
-                if (Date.now() > expiry) {
-                    return { type: 'tls_expired' };
-                }
-                if (Date.now() > expiry - TLS_EXPIRY_WARNING_MS) {
-                    return { type: 'tls_expiring' };
-                }
-            }
-        }
-
         if (dashboardState.isUpdateAvailable) {
             const spec = {
                 version: dashboardState.newVersion,
@@ -74,11 +57,6 @@ export const Banners = (props: Props) => {
         return active;
     });
 
-    const openTlsWizard = () =>
-        navigate(
-            linkPathBuilder(RoutePath.Encryption, undefined, { [TLS_WIZARD_QUERY_KEY]: 'true' }),
-        );
-
     const announcementLinkHandler = (announcementUrl: string) => (text: string) => (
         <a href={announcementUrl} class={theme.link.link} target="_blank" rel="noopener noreferrer">
             {text}
@@ -92,48 +70,6 @@ export const Banners = (props: Props) => {
 
                 const renderBanner = (): JSX.Element => {
                     switch (current.type) {
-                        case 'tls_expired':
-                            return (
-                                <Banner
-                                    variant="critical"
-                                    message={intl.getMessage('tls_certificate_expired')}
-                                    action={
-                                        <Button
-                                            variant="secondary"
-                                            size="very-small"
-                                            compact
-                                            onClick={openTlsWizard}
-                                            class={s.actionButton}
-                                        >
-                                            {intl.getMessage('update_button')}
-                                        </Button>
-                                    }
-                                    onClose={() => setDismissed(current)}
-                                    data-testid="banner-tls-expired"
-                                />
-                            );
-
-                        case 'tls_expiring':
-                            return (
-                                <Banner
-                                    variant="warning"
-                                    message={intl.getMessage('tls_certificate_expiring')}
-                                    action={
-                                        <Button
-                                            variant="secondary"
-                                            size="very-small"
-                                            compact
-                                            onClick={openTlsWizard}
-                                            class={s.actionButton}
-                                        >
-                                            {intl.getMessage('update_button')}
-                                        </Button>
-                                    }
-                                    onClose={() => setDismissed(current)}
-                                    data-testid="banner-tls-expiring"
-                                />
-                            );
-
                         case 'update_auto':
                             return (
                                 <Banner

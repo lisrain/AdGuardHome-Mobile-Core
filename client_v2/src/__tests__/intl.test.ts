@@ -268,19 +268,19 @@ describe('getInitialLanguage', () => {
     });
 
     it('falls back to localStorage when no URL param is present', () => {
-        LocalStorageHelper.setItem(LANGUAGE_KEY, 'de');
+        LocalStorageHelper.setItem(LANGUAGE_KEY, 'zh-cn');
 
         const result = getInitialLanguage();
 
-        expect(result).toBe('de');
+        expect(result).toBe('zh-cn');
     });
 
     it('falls back to navigator.language when no URL param or localStorage', () => {
-        vi.stubGlobal('navigator', { language: 'fr-FR' });
+        vi.stubGlobal('navigator', { language: 'zh-TW' });
 
         const result = getInitialLanguage();
 
-        expect(result).toBe('fr');
+        expect(result).toBe('zh-tw');
         vi.unstubAllGlobals();
     });
 

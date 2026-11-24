@@ -1,16 +1,12 @@
 export type BannerSpec =
-    | { type: 'tls_expired' }
-    | { type: 'tls_expiring' }
     | { type: 'update_auto'; version: string; announcementUrl: string }
     | { type: 'update_manual'; version: string; announcementUrl: string };
 
 /** Keys matching the query param values for each banner type. */
-export type BannerType = 'tlsExpired' | 'tlsExpiring' | 'updateAuto' | 'updateManual';
+export type BannerType = 'updateAuto' | 'updateManual';
 
 /** Pre-built banner specs for visual QA. Use via `<Banners forceBanner={...}>` or `?forceBanner=updateAuto`. */
 export const BANNER_TEST_VALUES: Record<BannerType, BannerSpec> = {
-    tlsExpired: { type: 'tls_expired' },
-    tlsExpiring: { type: 'tls_expiring' },
     updateAuto: {
         type: 'update_auto',
         version: '1.0',
@@ -48,7 +44,6 @@ export const getForceBannerFromQuery = (): BannerSpec | null => {
 
 /**
  * Checks whether two banner specs represent the same logical banner.
- * For TLS banners, only the type matters.
  * For update banners, the version and announcement URL must also match.
  */
 export const bannerSpecsEqual = (a: BannerSpec, b: BannerSpec | null): b is BannerSpec => {

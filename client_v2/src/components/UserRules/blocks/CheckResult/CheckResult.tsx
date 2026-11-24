@@ -5,9 +5,7 @@ import intl from 'panel/common/intl';
 import theme from 'panel/lib/theme';
 import { Icon } from 'panel/common/ui/Icon';
 import { filteringState } from 'panel/stores/filtering';
-import { servicesState } from 'panel/stores/services';
 import { FILTERED_STATUS } from 'panel/helpers/constants';
-import { getServiceName } from 'panel/helpers/helpers';
 
 import { getCheckResultMeta } from '../../checkResultHelpers';
 import { type CheckResultData, type ResultActionKind } from '../../types';
@@ -28,7 +26,6 @@ type Props = {
     onEditRewrite: () => void;
     onDeleteRewrite: () => void;
     hasMatchedRewrite?: boolean;
-    hiddenActionKinds?: ResultActionKind[];
 };
 
 const renderSourceLabel = (source: string, sourceListType?: 'blocklist' | 'allowlist') => {
@@ -90,12 +87,7 @@ export const CheckResult = (props: Props) => {
         (props.checkResult.ip_addrs && props.checkResult.ip_addrs.length > 0
             ? props.checkResult.ip_addrs.join(', ')
             : null);
-    const normalizedServiceName = () =>
-        props.checkResult.service_name
-            ? getServiceName(servicesState.allServices, props.checkResult.service_name) ||
-              props.checkResult.service_name
-            : null;
-    const hiddenActionKindSet = () => new Set(props.hiddenActionKinds || []);
+    const normalizedServiceName = () => props.checkResult.service_name || null;
 
     const reasonContent = () => {
         if (hasStandaloneResultMessage()) {
@@ -232,11 +224,7 @@ export const CheckResult = (props: Props) => {
                 </div>
 
                 <div class={s.actionButtons}>
-                    <For
-                        each={meta().actions.filter(
-                            (action) => !hiddenActionKindSet().has(action.kind),
-                        )}
-                    >
+                    <For each={meta().actions}>
                         {(action) => (
                             <button
                                 type="button"

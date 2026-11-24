@@ -17,7 +17,6 @@ import {
     getQueryStatusLabel,
     getQueryStatusKey,
     getStatusClassName,
-    hasPersistentClient,
     isBlockedReason,
 } from '../../helpers';
 import type { NormalizedQueryLogItem } from 'panel/helpers/helpers';
@@ -36,9 +35,6 @@ type Props = {
     onUnblock: (domain: string) => void;
     onBlockClient: (domain: string, client: string) => void;
     onDisallowClient: (ip: string) => void;
-    onAddPersistentClient: (clientId: string) => void;
-    persistentClientIds: string[];
-    persistentClientsLoaded: boolean;
 };
 
 export const LogCard = (props: Props) => {
@@ -110,17 +106,11 @@ export const LogCard = (props: Props) => {
                         <ActionsMenu
                             domain={props.entry.domain}
                             client={props.entry.client}
-                            clientId={props.entry.client_id || props.entry.client}
                             onBlock={props.onBlock}
                             onUnblock={props.onUnblock}
                             onBlockClient={props.onBlockClient}
                             onDisallowClient={() => props.onDisallowClient(props.entry.client)}
-                            onAddPersistentClient={props.onAddPersistentClient}
                             isBlocked={isBlockedReason(props.entry.reason)}
-                            showAddPersistentClient={
-                                props.persistentClientsLoaded &&
-                                !hasPersistentClient(props.entry, props.persistentClientIds)
-                            }
                             testIdPrefix="query-log-card"
                         />
                     </div>

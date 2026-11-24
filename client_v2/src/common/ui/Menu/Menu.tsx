@@ -71,16 +71,10 @@ export const Menu = (props: Props) => {
                         },
                         { label: 'DNS', path: Paths.Dns, routePath: RoutePath.Dns },
                         {
-                            label: intl.getMessage('protocols'),
-                            path: Paths.Encryption,
-                            routePath: RoutePath.Encryption,
-                        },
-                        {
                             label: intl.getMessage('clients'),
                             path: Paths.Clients,
                             routePath: RoutePath.Clients,
                         },
-                        { label: 'DHCP', path: Paths.Dhcp, routePath: RoutePath.Dhcp },
                     ]}
                     isActive={isActive}
                 />
@@ -102,11 +96,6 @@ export const Menu = (props: Props) => {
                             label: intl.getMessage('dns_rewrites'),
                             path: Paths.DnsRewrites,
                             routePath: RoutePath.DnsRewrites,
-                        },
-                        {
-                            label: intl.getMessage('blocked_services'),
-                            path: Paths.BlockedServices,
-                            routePath: RoutePath.BlockedServices,
                         },
                         {
                             label: intl.getMessage('user_rules_title'),

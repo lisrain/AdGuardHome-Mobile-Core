@@ -1,4 +1,5 @@
 import { Show, createSignal } from 'solid-js';
+
 import cn from 'clsx';
 
 import intl from 'panel/common/intl';
@@ -11,14 +12,11 @@ import s from './ActionsMenu.module.pcss';
 type Props = {
     domain: string;
     client: string;
-    clientId?: string;
     onBlock: (domain: string) => void;
     onUnblock: (domain: string) => void;
     onBlockClient: (domain: string, client: string) => void;
     onDisallowClient: () => void;
-    onAddPersistentClient?: (clientId: string) => void;
     isBlocked: boolean;
-    showAddPersistentClient?: boolean;
     testIdPrefix?: string;
 };
 
@@ -41,14 +39,6 @@ export const ActionsMenu = (props: Props) => {
 
     const handleDisallowClient = () => {
         props.onDisallowClient();
-        setOpen(false);
-    };
-
-    const handleAddPersistentClient = () => {
-        const nextClientId = props.clientId || props.client;
-        if (props.onAddPersistentClient && nextClientId) {
-            props.onAddPersistentClient(nextClientId);
-        }
         setOpen(false);
     };
 
@@ -96,18 +86,6 @@ export const ActionsMenu = (props: Props) => {
                     {intl.getMessage('disallow_this_client')}
                 </button>
             </li>
-            <Show when={props.showAddPersistentClient && props.onAddPersistentClient}>
-                <li role="none">
-                    <button
-                        type="button"
-                        data-testid={`${props.testIdPrefix}-action-add-persistent-client`}
-                        class={cn(s.menuItem, s.menuButton, theme.text.t3)}
-                        onClick={handleAddPersistentClient}
-                    >
-                        {intl.getMessage('add_persistent_client')}
-                    </button>
-                </li>
-            </Show>
         </ul>
     );
 

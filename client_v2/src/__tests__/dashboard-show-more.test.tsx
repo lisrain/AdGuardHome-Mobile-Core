@@ -3,14 +3,12 @@ import { render, screen, within } from '@solidjs/testing-library';
 import { HashRouter, Route } from '@solidjs/router';
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { TopClients } from 'panel/components/Dashboard/blocks/TopClients';
 import { TopQueriedDomains } from 'panel/components/Dashboard/blocks/TopQueriedDomains';
 import { TopBlockedDomains } from 'panel/components/Dashboard/blocks/TopBlockedDomains';
 import { TopUpstreams } from 'panel/components/Dashboard/blocks/TopUpstreams';
 import { UpstreamAvgTime } from 'panel/components/Dashboard/blocks/UpstreamAvgTime';
 import { DAY } from 'panel/helpers/constants';
 import { formatCompactNumber } from 'panel/helpers/helpers';
-import { copyInDom } from 'panel/__tests__/helpers/copy';
 import { mockMatchMedia } from 'panel/__tests__/helpers/matchMedia';
 
 const renderWithRouter = (ui: () => JSX.Element) =>
@@ -38,7 +36,6 @@ const getDomainRow = (domain: string) => {
 
 /** Rows a card shows before the "Show more" footer would reveal anything. */
 const DOMAINS_VISIBLE_ITEMS = 5;
-const CLIENTS_VISIBLE_ITEMS = 4;
 
 /** Filler rows, used to push a list past the card's visible limit. */
 const fillers = (count: number) =>
@@ -48,17 +45,6 @@ describe('Dashboard "Show more" links', () => {
     beforeEach(() => {
         // Drives `useIsDesktop` (768px breakpoint) for the responsive assertions.
         mockMatchMedia(false);
-    });
-
-    it('Top clients card links to /top_clients', () => {
-        renderWithRouter(() => (
-            <TopClients
-                topClients={[{ name: '10.0.0.1', count: 5 }, ...fillers(CLIENTS_VISIBLE_ITEMS)]}
-                numDnsQueries={100}
-            />
-        ));
-        expect(screen.getByText(copyInDom('show_more'))).toBeInTheDocument();
-        expect(getLinkHref('show-more-top-clients')).toContain('/top_clients');
     });
 
     it('Top queried domains card links to /top_queried_domains', () => {
@@ -186,19 +172,6 @@ describe('Dashboard "Show more" links', () => {
             />
         ));
         expect(screen.queryByTestId('show-more-upstream-avg-time')).toBeNull();
-    });
-
-    it('Top clients shows the link once a fifth client is hidden', () => {
-        const { unmount } = renderWithRouter(() => (
-            <TopClients topClients={fillers(CLIENTS_VISIBLE_ITEMS)} numDnsQueries={100} />
-        ));
-        expect(screen.queryByTestId('show-more-top-clients')).toBeNull();
-        unmount();
-
-        renderWithRouter(() => (
-            <TopClients topClients={fillers(CLIENTS_VISIBLE_ITEMS + 1)} numDnsQueries={100} />
-        ));
-        expect(getLinkHref('show-more-top-clients')).toContain('/top_clients');
     });
 
     it('the link includes the selected stats period', () => {

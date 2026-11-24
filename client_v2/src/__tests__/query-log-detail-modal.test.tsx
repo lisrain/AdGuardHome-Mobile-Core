@@ -39,11 +39,9 @@ const defaultProps: ComponentProps<typeof DetailModal> = {
     onClose: vi.fn(),
     onBlock: vi.fn(),
     onAddToAllowlist: vi.fn(),
-    onAllowService: vi.fn(),
     onDisableFilter: vi.fn(),
     onDisableSafeBrowsing: vi.fn(),
     onDisableParental: vi.fn(),
-    onDisableSafeSearch: vi.fn(),
     onRemoveRewrite: vi.fn(),
     onEditRewrite: vi.fn(),
 };
@@ -103,7 +101,7 @@ describe('DetailModal actions footer', () => {
         expect(props.onClose).toHaveBeenCalled();
     });
 
-    it('blocked service → Add to allowlist + Allow service', () => {
+    it('blocked service → Add to allowlist only', () => {
         render(() => (
             <DetailModal
                 {...defaultProps}
@@ -114,11 +112,14 @@ describe('DetailModal actions footer', () => {
             />
         ));
         expect(
-            screen.getByTestId('query-log-detail-action-allow-service'),
+            screen.getByTestId('query-log-detail-action-allowlist'),
         ).toBeInTheDocument();
+        expect(
+            screen.queryByTestId('query-log-detail-action-allow-service'),
+        ).not.toBeInTheDocument();
     });
 
-    it('safe search → Add to allowlist + Disable Safe search', () => {
+    it('safe search → Add to allowlist only', () => {
         render(() => (
             <DetailModal
                 {...defaultProps}
@@ -126,8 +127,11 @@ describe('DetailModal actions footer', () => {
             />
         ));
         expect(
-            screen.getByTestId('query-log-detail-action-disable-safe-search'),
+            screen.getByTestId('query-log-detail-action-allowlist'),
         ).toBeInTheDocument();
+        expect(
+            screen.queryByTestId('query-log-detail-action-disable-safe-search'),
+        ).not.toBeInTheDocument();
     });
 
     it('error entry → footer is hidden entirely', () => {

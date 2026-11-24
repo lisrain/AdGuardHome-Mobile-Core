@@ -43,34 +43,6 @@ import {
 describe('getDnsStatus', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('fetches TLS status when the core is running', async () => {
-        mocks.getVersionJson.mockResolvedValue({
-            disabled: true,
-            new_version: 'x',
-        });
-        mocks.getProfile.mockResolvedValue({ name: 'n', theme: 't' });
-        mocks.tlsStatus.mockResolvedValue({ enabled: false });
-
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-            new Response(
-                JSON.stringify({
-                    running: true,
-                    version: 'v',
-                    dns_port: 53,
-                    dns_addresses: [],
-                    protection_enabled: true,
-                    http_port: 80,
-                }),
-                { status: 200 },
-            ),
-        );
-
-        await getDnsStatus();
-        // allow microtasks for chained getVersion/getTlsStatus/getProfile
-        await new Promise((r) => setTimeout(r, 0));
-        expect(mocks.tlsStatus).toHaveBeenCalled();
-    });
-
     it('loads the profile so the name and theme are available', async () => {
         mocks.getVersionJson.mockResolvedValue({
             disabled: true,
@@ -320,14 +292,14 @@ describe('changeLanguage', () => {
         // must not be sent back as is.
         mocks.getProfile.mockResolvedValue({ name: 'admin', language: 'en', theme: null });
 
-        await changeLanguage('de');
+        await changeLanguage('zh-cn');
 
         expect(mocks.updateProfile).toHaveBeenCalledWith({
             name: 'admin',
-            language: 'de',
+            language: 'zh-cn',
             theme: 'auto',
         });
-        expect(dashboardState.language).toBe('de');
+        expect(dashboardState.language).toBe('zh-cn');
         expect(mocks.addErrorToast).not.toHaveBeenCalled();
     });
 });
@@ -342,14 +314,14 @@ describe('changeTheme', () => {
     it('sends a supported language when the profile has none', async () => {
         // An installation that never selected a language returns an empty one,
         // which the profile API rejects on update.
-        LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.LANGUAGE, 'ru');
+        LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.LANGUAGE, 'zh-cn');
         mocks.getProfile.mockResolvedValue({ name: 'admin', language: '', theme: 'auto' });
 
         await changeTheme('dark');
 
         expect(mocks.updateProfile).toHaveBeenCalledWith({
             name: 'admin',
-            language: 'ru',
+            language: 'zh-cn',
             theme: 'dark',
         });
         expect(dashboardState.theme).toBe('dark');
@@ -357,14 +329,14 @@ describe('changeTheme', () => {
     });
 
     it('keeps the language already selected in the profile', async () => {
-        LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.LANGUAGE, 'ru');
-        mocks.getProfile.mockResolvedValue({ name: 'admin', language: 'de', theme: 'auto' });
+        LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.LANGUAGE, 'zh-cn');
+        mocks.getProfile.mockResolvedValue({ name: 'admin', language: 'zh-tw', theme: 'auto' });
 
         await changeTheme('light');
 
         expect(mocks.updateProfile).toHaveBeenCalledWith({
             name: 'admin',
-            language: 'de',
+            language: 'zh-tw',
             theme: 'light',
         });
     });

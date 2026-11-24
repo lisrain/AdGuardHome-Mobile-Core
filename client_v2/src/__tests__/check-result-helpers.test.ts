@@ -310,10 +310,6 @@ describe('getCheckResultMeta', () => {
                 kind: 'allow',
                 label: intl.getMessage('user_rules_add_to_allowlist'),
             },
-            {
-                kind: 'disable-safesearch',
-                label: intl.getMessage('user_rules_disable_safe_search'),
-            },
         ]);
     });
 

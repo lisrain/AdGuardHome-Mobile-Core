@@ -52,7 +52,6 @@ vi.mock('panel/components/Dashboard', () => ({
     Dashboard: () => <div data-testid="route-dashboard" />,
 }));
 vi.mock('panel/components/Stats', () => ({
-    TopClientsPage: () => <div data-testid="route-top-clients" />,
     TopQueriedDomainsPage: () => <div data-testid="route-top-queried-domains" />,
     TopBlockedDomainsPage: () => <div data-testid="route-top-blocked-domains" />,
     TopUpstreamsPage: () => <div data-testid="route-top-upstreams" />,
@@ -71,7 +70,6 @@ describe('App routing', () => {
     });
 
     it.each([
-        ['#/top_clients', 'route-top-clients'],
         ['#/top_queried_domains', 'route-top-queried-domains'],
         ['#/top_blocked_domains', 'route-top-blocked-domains'],
         ['#/top_upstreams', 'route-top-upstreams'],

@@ -438,31 +438,6 @@ test.describe('User rules desktop', () => {
         await expect(page.getByTestId('user-rules-result-title')).toHaveText('Domain is allowed');
     });
 
-    test('offers both actions for blocked services and allows the service', async ({ page }) => {
-        await openUserRules(page, {
-            blockedServicesList: {
-                ...DEFAULT_BLOCKED_SERVICES_LIST,
-                ids: ['youtube'],
-            },
-        });
-
-        await page.getByTestId('user-rules-check-hostname').fill('service.example');
-        await selectDnsRecordType(page, 'A');
-        await page.getByTestId('user-rules-check-submit').click();
-
-        await expect(page.getByTestId('user-rules-result-action-allow')).toHaveText(
-            'Add to allowlist',
-        );
-        await expect(
-            page.getByTestId('user-rules-result-action-disable-blocked-service'),
-        ).toHaveText('Allow service');
-
-        await page.getByTestId('user-rules-result-action-disable-blocked-service').click();
-
-        await expect(page.getByTestId('toast').last()).toContainText(
-            'The YouTube service was allowed',
-        );
-    });
 });
 
 test.describe('User rules mobile', () => {

@@ -13,7 +13,6 @@ import {
     getAdditionalLogs,
 } from 'panel/stores/queryLogs';
 import { accessState, getAccessList, toggleClientBlock } from 'panel/stores/access';
-import { dashboardState, getClients } from 'panel/stores/dashboard';
 import {
     filteringState,
     getFilteringStatus,
@@ -22,12 +21,7 @@ import {
     blockDomainForClient,
     disableFilter,
 } from 'panel/stores/filtering';
-import { servicesState, getAllBlockedServices, allowBlockedService } from 'panel/stores/services';
-import {
-    disableSafeBrowsing,
-    disableParental,
-    disableSafeSearch,
-} from 'panel/stores/settings';
+import { disableSafeBrowsing, disableParental } from 'panel/stores/settings';
 import { deleteRewrite, getRewritesList } from 'panel/stores/rewrites';
 import { openModal } from 'panel/stores/modals';
 import {
@@ -37,7 +31,6 @@ import {
     MODAL_TYPE,
 } from 'panel/helpers/constants';
 import { getLogsUrlParams } from 'panel/helpers/helpers';
-import { RoutePath, linkPathBuilder } from 'panel/components/Routes/Paths';
 
 import { filterLogsByStatus } from './helpers';
 import type { NormalizedQueryLogItem, Filter } from 'panel/helpers/helpers';
@@ -75,9 +68,7 @@ export const QueryLog = () => {
     onMount(() => {
         getLogsConfig();
         getAccessList();
-        getClients();
         getFilteringStatus();
-        getAllBlockedServices();
         getRewritesList();
     });
 
@@ -118,10 +109,6 @@ export const QueryLog = () => {
     const currentReason = () => queryLogsState.filter?.reason ?? DEFAULT_LOGS_FILTER.reason;
     const infiniteScrollResetToken = () =>
         `${currentSearch()}:${currentStatus()}:${currentReason()}`;
-    const persistentClientIds = () =>
-        (dashboardState.clients || []).flatMap(
-            (persistentClient: any) => persistentClient.ids ?? [],
-        );
     const visibleLogs = () =>
         filterLogsByStatus(
             queryLogsState.logs || [],
@@ -171,10 +158,6 @@ export const QueryLog = () => {
         unblockDomain(domain);
     };
 
-    const handleAllowService = (serviceId: string) => {
-        allowBlockedService(serviceId);
-    };
-
     const handleDisableFilter = (filter: Filter) => {
         disableFilter(filter);
     };
@@ -183,9 +166,6 @@ export const QueryLog = () => {
     };
     const handleDisableParental = () => {
         disableParental();
-    };
-    const handleDisableSafeSearch = () => {
-        disableSafeSearch();
     };
     const handleRemoveRewrite = (rewrite: RewriteEntry) => {
         deleteRewrite(rewrite, { withUndo: true });
@@ -202,10 +182,6 @@ export const QueryLog = () => {
 
     const handleDisallowClient = (ip: string) => {
         setDisallowTarget(ip);
-    };
-
-    const handleAddPersistentClient = (clientId: string) => {
-        navigate(linkPathBuilder(RoutePath.ClientsAdd, undefined, { id: clientId }));
     };
 
     const handleConfirmDisallow = () => {
@@ -284,13 +260,10 @@ export const QueryLog = () => {
                         onUnblock={handleUnblockDomain}
                         onBlockClient={handleBlockClient}
                         onDisallowClient={handleDisallowClient}
-                        onAddPersistentClient={handleAddPersistentClient}
                         onSearchSelect={handleSearch}
                         filters={filteringState.filters || []}
-                        services={servicesState.allServices || []}
+                        services={[]}
                         whitelistFilters={filteringState.whitelistFilters || []}
-                        persistentClientIds={persistentClientIds()}
-                        persistentClientsLoaded={!dashboardState.processingClients}
                     />
                 </div>
 
@@ -315,17 +288,10 @@ export const QueryLog = () => {
                                                         onUnblock={handleUnblockDomain}
                                                         onBlockClient={handleBlockClient}
                                                         onDisallowClient={handleDisallowClient}
-                                                        onAddPersistentClient={
-                                                            handleAddPersistentClient
-                                                        }
                                                         filters={filteringState.filters || []}
-                                                        services={servicesState.allServices || []}
+                                                        services={[]}
                                                         whitelistFilters={
                                                             filteringState.whitelistFilters || []
-                                                        }
-                                                        persistentClientIds={persistentClientIds()}
-                                                        persistentClientsLoaded={
-                                                            !dashboardState.processingClients
                                                         }
                                                     />
                                                 )}
@@ -357,16 +323,14 @@ export const QueryLog = () => {
                     <DetailModal
                         entry={selectedEntry()!}
                         filters={filteringState.filters || []}
-                        services={servicesState.allServices || []}
+                        services={[]}
                         whitelistFilters={filteringState.whitelistFilters || []}
                         onClose={handleCloseDetail}
                         onBlock={handleBlockDomain}
                         onAddToAllowlist={handleUnblockDomain}
-                        onAllowService={handleAllowService}
                         onDisableFilter={handleDisableFilter}
                         onDisableSafeBrowsing={handleDisableSafeBrowsing}
                         onDisableParental={handleDisableParental}
-                        onDisableSafeSearch={handleDisableSafeSearch}
                         onRemoveRewrite={handleRemoveRewrite}
                         onEditRewrite={handleEditRewrite}
                     />

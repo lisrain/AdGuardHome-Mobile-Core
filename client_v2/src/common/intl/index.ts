@@ -246,7 +246,7 @@ const intl = {
      * (common at boot), it is fetched on-demand via the lazy
      * `LOCALE_LOADERS` map before the translator is rebuilt.
      */
-    changeLanguage: async (newLang: LocalesType) => {
+    changeLanguage: async (newLang: string) => {
         const resolved = resolveLanguage(newLang);
         try {
             await preloadLocale(resolved);
