@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,6 +73,15 @@ type Updater struct {
 // index URL.  The mobile build points it at the repository's version.json.
 const defaultVersionURLEnv = "AGH_UPDATE_URL"
 
+// mobileVersionURL is the update index of this fork.  It must be kept in the
+// format expected by [Updater.parseVersionResponse], see version.json in the
+// repository root.
+var mobileVersionURL = &url.URL{
+	Scheme: urlutil.SchemeHTTPS,
+	Host:   "raw.githubusercontent.com",
+	Path:   "/lisrain/AdGuardHome-Mobile-Core/master/version.json",
+}
+
 // DefaultVersionURL returns the default URL for the version announcement.
 func DefaultVersionURL() *url.URL {
 	if s := os.Getenv(defaultVersionURLEnv); s != "" {
@@ -82,11 +90,7 @@ func DefaultVersionURL() *url.URL {
 		}
 	}
 
-	return &url.URL{
-		Scheme: urlutil.SchemeHTTPS,
-		Host:   "static.adtidy.org",
-		Path:   path.Join("adguardhome", version.Channel(), "version.json"),
-	}
+	return mobileVersionURL
 }
 
 // Config is the AdGuard Home updater configuration.

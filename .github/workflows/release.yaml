@@ -87,8 +87,12 @@ jobs:
           BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
 
           jq --arg v "${VERSION}" \
-             --arg u "${BASE}/AdGuardHome_linux_arm64.tar.gz" \
-             '.new_version = $v | .download_linux_arm64 = $u' \
+             --arg b "${BASE}" \
+             '.version = $v
+              | .announcement = "AdGuard Home Mobile Core \($v) is now available!"
+              | .announcement_url = $b
+              | .download_linux_amd64 = "\($b)/AdGuardHome_linux_amd64.tar.gz"
+              | .download_linux_arm64 = "\($b)/AdGuardHome_linux_arm64.tar.gz"' \
              version.json > version.json.tmp
           mv version.json.tmp version.json
 
